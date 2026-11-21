@@ -232,7 +232,9 @@ end
 function DashboardWidget:onTick()
     self.minutes = self.minutes + 1
     local prev_next = self.next_key
-    local wx_due = (not self.weather) or (os.time() - (self.weather.fetched_at or 0) >= self.cfg.weather_minutes * 60)
+    local last = self.weather_tried_at or 0
+    local wx_due = self.weather_error and (os.time() - last >= 5 * 60)
+        or (not self.weather_error and (not self.weather or os.time() - (self.weather.fetched_at or 0) >= self.cfg.weather_minutes * 60))
     if wx_due then
         self:updateWeather(false)
     else
@@ -249,6 +251,7 @@ function DashboardWidget:onTick()
 end
 
 function DashboardWidget:updateWeather(user)
+    self.weather_tried_at = os.time()
     if NetworkMgr:isConnected() then
         local ok, data, err = pcall(Weather.fetch, self.cfg.lat, self.cfg.lon, self.cfg.temperature_unit)
         if ok and data then
@@ -257,11 +260,11 @@ function DashboardWidget:updateWeather(user)
             self.weather_error = ok and err or tostring(data)
             logger.warn("dashboard weather:", self.weather_error)
         end
-    elseif not self.weather then
+    else
         self.weather_error = "offline"
     end
     self:build()
-    UIManager:setDirty(self, user and "flashui" or "ui")
+    UIManager:setDirty(self, "ui")
 end
 
 function DashboardWidget:onResume()
@@ -277,7 +280,7 @@ end
 
 function DashboardWidget:onCloseWidget()
     UIManager:unschedule(self.tick)
-    UIManager:setDirty(nil, "full")
+    UIManager:setDirty(nil, "ui")
 end
 
 return DashboardWidget

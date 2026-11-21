@@ -54,7 +54,7 @@ function Dashboard:addToMainMenu(menu_items)
 end
 
 function Dashboard:onShowDashboard()
-    UIManager:show(DashboardWidget:new{ cfg = self:loadSettings() }, "flashui")
+    UIManager:show(DashboardWidget:new{ cfg = self:loadSettings() }, "ui")
     return true
 end
 
