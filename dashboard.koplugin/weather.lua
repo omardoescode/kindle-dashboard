@@ -3,6 +3,8 @@ local json = require("json")
 local ltn12 = require("ltn12")
 local socket = require("socket")
 local socketutil = require("socketutil")
+local UIManager = require("ui/uimanager")
+local ffiutil = require("ffi/util")
 
 local M = {}
 
@@ -18,7 +20,7 @@ local CODES = {
 
 function M.describe(code) return CODES[code] or "—" end
 
-function M.fetch(lat, lon, unit)
+local function fetch_body(lat, lon, unit)
     local url = string.format("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f"
         .. "&current=temperature_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m"
         .. "&hourly=temperature_2m,precipitation_probability,weather_code"
@@ -34,10 +36,43 @@ function M.fetch(lat, lon, unit)
     })
     socketutil:reset_timeout()
     if code ~= 200 then return nil, "HTTP " .. tostring(code) end
-    local ok, data = pcall(json.decode, table.concat(sink))
+    return table.concat(sink)
+end
+
+local function parse(body)
+    local ok, data = pcall(json.decode, body)
     if not ok or type(data) ~= "table" or not data.current then return nil, "bad response" end
     data.fetched_at = os.time()
     return data
+end
+
+-- The request runs in a child process so a slow network never freezes taps.
+function M.fetch_async(lat, lon, unit, cb)
+    local pid, fd = ffiutil.runInSubProcess(function(_, child_fd)
+        local ok, body, err = pcall(fetch_body, lat, lon, unit)
+        if not ok then body, err = nil, body end
+        ffiutil.writeToFD(child_fd, body or ("\0" .. tostring(err)), true)
+    end, true)
+    if not pid then return cb(nil, "no subprocess") end
+    local started = os.time()
+    local function check()
+        if ffiutil.isSubProcessDone(pid) or ffiutil.getNonBlockingReadSize(fd) > 0 then
+            local out = ffiutil.readAllFromFD(fd) or ""
+            ffiutil.isSubProcessDone(pid, true)
+            if out:sub(1, 1) == "\0" then return cb(nil, out:sub(2)) end
+            return cb(parse(out))
+        end
+        if os.time() - started > 45 then
+            ffiutil.terminateSubProcess(pid)
+            local function collect()
+                if ffiutil.isSubProcessDone(pid) then ffiutil.readAllFromFD(fd) else UIManager:scheduleIn(1, collect) end
+            end
+            UIManager:scheduleIn(1, collect)
+            return cb(nil, "timeout")
+        end
+        UIManager:scheduleIn(0.5, check)
+    end
+    UIManager:scheduleIn(0.5, check)
 end
 
 local function clock(epoch, h12)

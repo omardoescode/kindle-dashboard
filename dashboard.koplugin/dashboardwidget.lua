@@ -293,20 +293,27 @@ function DashboardWidget:onTick()
 end
 
 function DashboardWidget:updateWeather(user)
+    if self.fetching then return end
     self.weather_tried_at = os.time()
-    if NetworkMgr:isConnected() then
-        local ok, data, err = pcall(Weather.fetch, self.cfg.lat, self.cfg.lon, self.cfg.temperature_unit)
-        if ok and data then
+    if not NetworkMgr:isConnected() then
+        self.weather_error = "offline"
+        self:build()
+        UIManager:setDirty(self, "ui")
+        return
+    end
+    self.fetching = true
+    Weather.fetch_async(self.cfg.lat, self.cfg.lon, self.cfg.temperature_unit, function(data, err)
+        self.fetching = false
+        if self.closed then return end
+        if data then
             self.weather, self.weather_error = data, nil
         else
-            self.weather_error = ok and err or tostring(data)
+            self.weather_error = err or "error"
             logger.warn("dashboard weather:", self.weather_error)
         end
-    else
-        self.weather_error = "offline"
-    end
-    self:build()
-    UIManager:setDirty(self, "ui")
+        self:build()
+        UIManager:setDirty(self, "ui")
+    end)
 end
 
 function DashboardWidget:onResume()
@@ -321,6 +328,7 @@ function DashboardWidget:onSuspend()
 end
 
 function DashboardWidget:onCloseWidget()
+    self.closed = true
     UIManager:unschedule(self.tick)
     UIManager:setDirty(nil, "ui")
 end
