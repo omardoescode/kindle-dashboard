@@ -6,6 +6,7 @@ local Event = require("ui/event")
 local Font = require("ui/font")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
+local GestureRange = require("ui/gesturerange")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
 local InputContainer = require("ui/widget/container/inputcontainer")
@@ -72,9 +73,39 @@ function DashboardWidget:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
     self.minutes = 0
     self.tick = function() self:onTick() end
+    if Device:hasFrontlight() then
+        local edge = math.floor(self.dimen.w * 0.15)
+        self.ges_events = {
+            LeftEdgeSwipe = { GestureRange:new{ ges = "swipe",
+                range = Geom:new{ x = 0, y = 0, w = edge, h = self.dimen.h } } },
+            RightEdgeSwipe = { GestureRange:new{ ges = "swipe",
+                range = Geom:new{ x = self.dimen.w - edge, y = 0, w = edge, h = self.dimen.h } } },
+        }
+    end
     self:build()
     UIManager:nextTick(function() self:updateWeather(true) end)
     self:schedule()
+end
+
+local function swipe_steps(ges)
+    local sign = (ges.direction == "north" and 1) or (ges.direction == "south" and -1) or 0
+    return sign * math.max(1, math.floor(ges.distance / Screen:scaleBySize(60)))
+end
+
+function DashboardWidget:onLeftEdgeSwipe(_, ges)
+    local steps = swipe_steps(ges)
+    if steps == 0 then return true end
+    local powerd = Device:getPowerDevice()
+    powerd:setIntensity(powerd:frontlightIntensity() + steps)
+    return true
+end
+
+function DashboardWidget:onRightEdgeSwipe(_, ges)
+    local steps = swipe_steps(ges)
+    if steps == 0 or not Device:hasNaturalLight() then return true end
+    local powerd = Device:getPowerDevice()
+    powerd:setWarmth(powerd:frontlightWarmth() + 5 * steps)
+    return true
 end
 
 function DashboardWidget:schedule()
@@ -186,7 +217,8 @@ function DashboardWidget:build()
     end
 
     -- Buttons
-    local bw = math.floor(inner / 4) - Screen:scaleBySize(9)
+    local gap = Screen:scaleBySize(12)
+    local bw = math.floor((inner - 3 * gap) / 4)
     local function btn(label, cb)
         return Button:new{ text = label, width = bw, bordersize = Screen:scaleBySize(2), radius = Screen:scaleBySize(8),
             text_font_size = 18, callback = cb, show_parent = self }
@@ -200,11 +232,11 @@ function DashboardWidget:build()
     continue:enableDisable(has_last and true or false)
     local buttons = HorizontalGroup:new{
         continue,
-        HorizontalSpan:new{ width = Screen:scaleBySize(12) },
+        HorizontalSpan:new{ width = gap },
         btn("Books", function() UIManager:close(self) end),
-        HorizontalSpan:new{ width = Screen:scaleBySize(12) },
+        HorizontalSpan:new{ width = gap },
         btn("Refresh", function() self:updateWeather(true) end),
-        HorizontalSpan:new{ width = Screen:scaleBySize(12) },
+        HorizontalSpan:new{ width = gap },
         btn("Kindle", function()
             UIManager:close(self)
             UIManager:nextTick(function() UIManager:broadcastEvent(Event:new("Exit")) end)
