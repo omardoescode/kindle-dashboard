@@ -17,6 +17,7 @@ local TextWidget = require("ui/widget/textwidget")
 local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
+local lfs = require("libs/libkoreader-lfs")
 local logger = require("logger")
 
 local Hijri = require("hijri")
@@ -185,12 +186,21 @@ function DashboardWidget:build()
     end
 
     -- Buttons
-    local bw = math.floor(inner / 3) - Screen:scaleBySize(8)
+    local bw = math.floor(inner / 4) - Screen:scaleBySize(9)
     local function btn(label, cb)
         return Button:new{ text = label, width = bw, bordersize = Screen:scaleBySize(2), radius = Screen:scaleBySize(8),
             text_font_size = 18, callback = cb, show_parent = self }
     end
+    local last = G_reader_settings:readSetting("lastfile")
+    local has_last = last and lfs.attributes(last, "mode") == "file"
+    local continue = btn("Continue", function()
+        UIManager:close(self)
+        UIManager:nextTick(function() require("apps/reader/readerui"):showReader(last) end)
+    end)
+    continue:enableDisable(has_last and true or false)
     local buttons = HorizontalGroup:new{
+        continue,
+        HorizontalSpan:new{ width = Screen:scaleBySize(12) },
         btn("Books", function() UIManager:close(self) end),
         HorizontalSpan:new{ width = Screen:scaleBySize(12) },
         btn("Refresh", function() self:updateWeather(true) end),
