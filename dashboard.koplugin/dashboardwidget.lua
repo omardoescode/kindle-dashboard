@@ -27,8 +27,9 @@ local Screen = Device.screen
 local BLACK, WHITE = Blitbuffer.COLOR_BLACK, Blitbuffer.COLOR_WHITE
 local GRAY = Blitbuffer.COLOR_GRAY_4
 
-local SANS, SANS_BOLD = "NotoSans-Regular.ttf", "NotoSans-Bold.ttf"
-local ARABIC = "../plugins/dashboard.koplugin/fonts/Zain-Bold.ttf"
+local FONTS = "../plugins/dashboard.koplugin/fonts/"
+local SANS, SANS_BOLD = FONTS .. "IBMPlexSans-Regular.ttf", FONTS .. "IBMPlexSans-SemiBold.ttf"
+local ARABIC = FONTS .. "Zain-Bold.ttf"
 
 local DashboardWidget = InputContainer:extend{
     name = "dashboard_widget",
