@@ -9,9 +9,9 @@ local _ = require("gettext")
 local DashboardWidget = require("dashboardwidget")
 
 local DEFAULTS = {
-    place = "Chicago",
-    lat = 41.8781,
-    lon = -87.6298,
+    place = "Minneapolis",
+    lat = 44.9778,
+    lon = -93.2650,
     method = "isna",
     madhab = "shafi",
     clock = "12h",

@@ -7,7 +7,7 @@ KOReader plugin for a Kindle Paperwhite 12th gen: prayer times, clock, Hijri dat
 - Arabic font: Zain (OFL), in `dashboard.koplugin/fonts`.
 - Design follows [kindil](https://github.com/sharno/kindil) (MIT).
 
-Settings: `koreader/settings/dashboard.lua` (place, lat, lon, method, madhab, clock, hijri_offset, temperature_unit, autostart).
+Default location: Minneapolis. Settings: `koreader/settings/dashboard.lua` (place, lat, lon, method, madhab, clock, hijri_offset, temperature_unit, autostart).
 
 Deploy: `./deploy.sh` (needs `ssh mykindle`).
 
