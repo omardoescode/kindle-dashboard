@@ -5,6 +5,7 @@ local GestureRange = require("ui/gesturerange")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local ScreenSaverLockWidget = require("ui/widget/screensaverlockwidget")
 local Dispatcher = require("dispatcher")
+local Event = require("ui/event")
 local LuaSettings = require("luasettings")
 local PluginShare = require("pluginshare")
 local UIManager = require("ui/uimanager")
@@ -23,7 +24,7 @@ local DEFAULTS = {
     hijri_offset = 0,
     temperature_unit = "celsius",
     autostart = true,
-    full_refresh_minutes = 15,
+    full_refresh_minutes = 30,
     weather_minutes = 30,
 }
 
@@ -91,8 +92,23 @@ function Dashboard:init()
     self.ui.menu:registerToMainMenu(self)
     local first = not PluginShare.dashboard_started
     PluginShare.dashboard_started = true
+    if first then
+        local f = io.open("/var/run/mykindle-ko-ready", "w")
+        if f then f:close() end
+    end
     if (first or self.ui.document == nil) and self:loadSettings().autostart then
         UIManager:nextTick(function() self:onShowDashboard() end)
+    end
+end
+
+-- KOReader has no per-language page direction; turn Arabic books right-to-left once, so a manual change stays.
+function Dashboard:onReaderReady(doc_settings)
+    if not doc_settings or doc_settings:isTrue("dashboard_rtl_checked") then return end
+    doc_settings:makeTrue("dashboard_rtl_checked")
+    local props = self.ui.document.getProps and self.ui.document:getProps()
+    local lang = props and props.language
+    if type(lang) == "string" and lang:lower():match("^ar") then
+        self.ui:handleEvent(Event:new("ToggleReadingOrder", true))
     end
 end
 

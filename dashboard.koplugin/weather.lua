@@ -20,6 +20,10 @@ local CODES = {
 
 function M.describe(code) return CODES[code] or "—" end
 
+-- JSON null decodes to a sentinel, not nil, so check every number before use.
+local function num(x) return type(x) == "number" and x or nil end
+M.num = num
+
 local function fetch_body(lat, lon, unit)
     local url = string.format("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f"
         .. "&current=temperature_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m"
@@ -41,8 +45,15 @@ end
 
 local function parse(body)
     local ok, data = pcall(json.decode, body)
-    if not ok or type(data) ~= "table" or not data.current then return nil, "bad response" end
+    if not ok or type(data) ~= "table" or type(data.current) ~= "table" then return nil, "bad response" end
+    local c = data.current
+    c.temperature_2m = num(c.temperature_2m)
+    if not c.temperature_2m then return nil, "bad response" end
+    c.apparent_temperature = num(c.apparent_temperature) or c.temperature_2m
+    c.precipitation = num(c.precipitation) or 0
+    c.weather_code = num(c.weather_code)
     data.fetched_at = os.time()
+    M.last = data
     return data
 end
 
@@ -86,8 +97,8 @@ function M.rain_line(data, now, h12)
     if m and m.time then
         local raining_now = (data.current.precipitation or 0) > 0.05
         for i, t in ipairs(m.time) do
-            local p = m.precipitation[i] or 0
-            if t + 900 > now then
+            local p = num(m.precipitation and m.precipitation[i]) or 0
+            if num(t) and t + 900 > now then
                 if raining_now and p < 0.05 then
                     return string.format("Rain easing in ~%d min", math.max(0, math.floor((t - now) / 60)))
                 elseif not raining_now and p >= 0.1 then
@@ -102,7 +113,8 @@ function M.rain_line(data, now, h12)
     local h = data.hourly
     if h and h.time then
         for i, t in ipairs(h.time) do
-            if t > now and t < now + 12 * 3600 and (h.precipitation_probability[i] or 0) >= 50 then
+            if num(t) and t > now and t < now + 12 * 3600
+                and (num(h.precipitation_probability and h.precipitation_probability[i]) or 0) >= 50 then
                 return "Rain likely around " .. clock(t, h12)
             end
         end
@@ -116,12 +128,12 @@ function M.next_hours(data, now, n, h12)
     local h = data.hourly
     if not (h and h.time) then return out end
     for i, t in ipairs(h.time) do
-        if t > now and #out < n then
+        local temp = num(h.temperature_2m and h.temperature_2m[i])
+        if num(t) and t > now and temp and #out < n then
             table.insert(out, {
                 label = clock(t, h12),
-                temp = h.temperature_2m[i],
-                pop = h.precipitation_probability[i],
-                code = h.weather_code[i],
+                temp = temp,
+                pop = num(h.precipitation_probability and h.precipitation_probability[i]),
             })
         end
     end
