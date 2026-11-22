@@ -74,6 +74,38 @@ if not ScreenSaverLockWidget.dashboard_swipe then
     end
 end
 
+-- KOReader has one sort order for all folders, and its "last read date" sort uses file access
+-- times, which never change on the Kindle (noatime). Sort the home folder by reading history.
+local FileChooser = require("ui/widget/filechooser")
+if not FileChooser.dashboard_sort then
+    FileChooser.dashboard_sort = true
+    local ffiUtil = require("ffi/util")
+    local recent = {
+        text = _("last opened"),
+        can_collate_mixed = false,
+        init_sort_func = function()
+            local last = {}
+            local ok, ReadHistory = pcall(require, "readhistory")
+            if ok then
+                for _, h in ipairs(ReadHistory.hist or {}) do
+                    if h.file then last[h.file] = math.max(last[h.file] or 0, h.time or 0) end
+                end
+            end
+            return function(a, b)
+                local ta, tb = last[a.path] or 0, last[b.path] or 0
+                if ta ~= tb then return ta > tb end
+                return ffiUtil.strcoll(a.text, b.text)
+            end
+        end,
+    }
+    local orig_get_collate = FileChooser.getCollate
+    FileChooser.getCollate = function(self)
+        local home = G_reader_settings:readSetting("home_dir")
+        if home and self.path == home then return recent, "dashboard_recent" end
+        return orig_get_collate(self)
+    end
+end
+
 local Dashboard = WidgetContainer:extend{
     name = "dashboard",
     is_doc_only = false,

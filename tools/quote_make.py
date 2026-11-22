@@ -3,11 +3,10 @@ from PIL import Image, ImageDraw, ImageFont
 W, H = 1272, 1696
 MARGIN = 120
 F = sys.argv[1]
-quote = ("Our actions may be impeded . . . but there can be no impeding our intentions or dispositions. "
- "Because we can accommodate and adapt. The mind adapts and converts to its own purposes the obstacle to our acting. "
- "And then he concluded with powerful words destined for maxim.")
+quote = ("Our actions may be impeded . . . but there can be no impeding our intentions or our dispositions. "
+ "Because we can accommodate and adapt. The mind adapts and converts to its own purposes the obstacle to our acting.")
 maxim = ["The impediment to action advances action.", "What stands in the way becomes the way."]
-source = "Marcus Aurelius, as told in The Obstacle Is the Way"
+source = "Marcus Aurelius, Meditations 5.20"
 img = Image.new("L", (W, H), 255)
 d = ImageDraw.Draw(img)
 mark = ImageFont.truetype(F + "/IBMPlexSans-SemiBold.ttf", 200)
