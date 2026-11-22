@@ -34,6 +34,7 @@ Simple UI is the start screen and the screen after a book closes (Simple UI sett
 - **Session labels and weekly goals**: Start asks for a label (default: Work, Uni Study, Research Work, Personal Study; the last used label is first). The stopwatch shows one row per label with the time done this week (from Monday) and the time left to its weekly goal, or "Goal met". Tap **Labels** (when the stopwatch is not running) to add, rename or remove a label and to set its goal in hours. A removed label leaves the Start list only: its past sessions keep their label and still count.
 - **Quote lock screen** while the device sleeps, unlocked with a swipe up.
 - **Arabic books** turn pages right-to-left automatically.
+- **Bluetooth** (Settings tab → Bluetooth, after Network): turn Bluetooth on or off, scan, pair, connect, disconnect, and forget (hold) devices, through Amazon's `com.lab126.btfd` over lipc. No Amazon UI needed. Works with [KinAMP](https://github.com/kbarni/KinAMP) for music while reading.
 - **Home folder sort**: the home folder is sorted by "last opened" (reading history).
 - **Brightness and warmth**: use KOReader gestures (left edge swipe: brightness, right edge swipe: warmth). Simple UI passes edge swipes to them.
 
