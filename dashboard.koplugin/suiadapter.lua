@@ -40,6 +40,12 @@ function SUI.register(modules, actions, bars)
     end
 end
 
+-- Simple UI keeps the tab of the screen below active; the adhkar screen opened from a menu belongs to no tab.
+function SUI.clearActiveTab(widget)
+    local Bottombar = load("screens/sui_bottombar")
+    call("Bottombar.setActiveTab", Bottombar and Bottombar.setActiveTab, widget, "dash_adhkar_open")
+end
+
 -- Height of our full-screen widgets: Simple UI puts its top bar and bottom bar around them.
 function SUI.contentHeight()
     local Core = SUI.bars and package.loaded["infra/sui_core"]

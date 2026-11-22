@@ -432,7 +432,8 @@ end
 Home.modules = MODULES
 Home.bars = {
     { id = "dash_stopwatch", widget_name = "dashboard_stopwatch", active_action_id = "dash_stopwatch", is_pageable = false },
-    { id = "dash_adhkar", widget_name = "dashboard_adhkar", is_pageable = false },
+    { id = "dash_adhkar", widget_name = "dashboard_adhkar", is_pageable = false,
+        on_inject = function(widget) SUI.clearActiveTab(widget) end },
 }
 Home.actions = {
     { id = "dash_stopwatch", label = "Focus", icon = "nerd:F252", execute = function() Home.openStopwatch() end },
