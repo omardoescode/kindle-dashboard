@@ -1,0 +1,3 @@
+phoenix-cc0-spritesheet.png: "Pixel Phoenix" by zonked, CC0 (public domain).
+Source: https://opengameart.org/content/pixel-phoenix
+Unchanged copy. tools/critter_phoenix.py makes the Simple UI critter from it.
