@@ -72,6 +72,25 @@ if not ScreenSaverLockWidget.dashboard_swipe then
     end
 end
 
+-- Two fingers on the two top corners at once shows or hides the KinAMP player on every screen,
+-- Simple UI's too. KOReader reports it as one two_finger_tap at the midpoint of the two fingers.
+local UIManager = require("ui/uimanager")
+if not UIManager.dashboard_corners then
+    UIManager.dashboard_corners = true
+    local orig_send = UIManager.sendEvent
+    UIManager.sendEvent = function(self, event)
+        local ges = event.handler == "onGesture" and event.args and event.args[1]
+        if ges and ges.ges == "two_finger_tap" and ges.pos and ges.span then
+            local w, h = Device.screen:getWidth(), Device.screen:getHeight()
+            if ges.span > w * 0.6 and ges.pos.y < h * 0.12 then
+                self:broadcastEvent(Event:new("ShowKinAMPPlayer"))
+                return true
+            end
+        end
+        return orig_send(self, event)
+    end
+end
+
 -- KOReader drops the leading zero of 12-hour times ("8:46 PM"); the user wants "08:46 PM" everywhere.
 local datetime = require("datetime")
 if not datetime.dashboard_padded then
@@ -146,6 +165,13 @@ function Dashboard:init()
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true
         StopwatchWidget.keep_awake(false)
+        -- An older koreader.sh that ends after we start deletes our /var/tmp copy of it, and the next
+        -- KOReader restart then shows "startup script has been updated". Put the copy back.
+        if Device:isKindle() then
+            require("ui/uimanager"):scheduleIn(60, function()
+                os.execute("[ -e /var/tmp/koreader.sh ] || cp -pf ./koreader.sh /var/tmp/koreader.sh")
+            end)
+        end
         local f = io.open("/var/run/mykindle-ko-ready", "w")
         if f then f:close() end
     end
