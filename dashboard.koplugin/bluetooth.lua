@@ -1,8 +1,10 @@
 -- Bluetooth through Amazon's daemon com.lab126.btfd over lipc (Kindle only).
 -- Properties, read on a PW6 with lipc-probe:
---   BTstate (int, 0 off, 2 on), BTenable (str "1:1" on, "0:1" off), triggerBTscan (int),
+--   BTstate (int, 0 off, 1 on, 2 connected), BTenable (str "1:1" on), triggerBTscan (int),
 --   ListDiscovered, ListPaired, ListConnected (hasharrays of bd_name, bd_address, is_paired, is_connected),
 --   Bond, Unbond, Connect, Disconnect (str MAC), PairUserConfirmation (int).
+-- btfd refuses BTenable "0:x" ("not safe yet" in /var/log/messages). Off works only through BTflightMode,
+-- and turning on after it once hung btmanagerd, so there is no off here; Disconnect always works.
 local logger = require("logger")
 
 local BTFD = "com.lab126.btfd"
@@ -62,11 +64,12 @@ function BT.available()
 end
 
 function BT.isOn()
-    return call("get_int_property", "BTstate") == 2
+    local state = call("get_int_property", "BTstate")
+    return state ~= nil and state ~= 0
 end
 
-function BT.setOn(on)
-    return call("set_string_property", "BTenable", on and "1:1" or "0:1")
+function BT.turnOn()
+    return call("set_string_property", "BTenable", "1:1")
 end
 
 function BT.scan()

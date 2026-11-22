@@ -439,6 +439,9 @@ Home.actions = {
     { id = "dash_stopwatch", label = "Focus", icon = "nerd:F252", execute = function() Home.openStopwatch() end },
     { id = "dash_adhkar_open", label = "Adhkar", icon = "nerd:F186",
         execute = function() Home.openAdhkar(MODULES[4].due(os.time())) end },
+    -- KinAMP's own show/hide event. A broadcast reaches its plugin under the Simple UI screens too.
+    { id = "dash_music", label = "Music", icon = "nerd:F001",
+        execute = function() UIManager:broadcastEvent(require("ui/event"):new("ShowKinAMPPlayer")) end },
 }
 
 return Home

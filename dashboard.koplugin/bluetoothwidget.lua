@@ -35,20 +35,15 @@ local function wait(text, done, finish)
 end
 
 function BluetoothWidget:items()
-    local on = BT.isOn()
-    local items = {
-        {
-            text = on and "Bluetooth: on" or "Bluetooth: off",
-            mandatory = on and "Turn off" or "Turn on",
-            callback = function() self:toggle(not on) end,
-        },
-    }
-    if not on then return items end
+    if not BT.isOn() then
+        return { { text = "Bluetooth: off", mandatory = "Turn on", callback = function() self:turnOn() end } }
+    end
+    local items = {}
     table.insert(items, { text = "Scan for devices", callback = function() self:scan() end })
     for _, d in ipairs(BT.devices()) do
         table.insert(items, {
             text = d.name,
-            mandatory = d.connected and "Connected" or d.paired and "Paired" or "",
+            mandatory = d.connected and "Connected · tap to disconnect" or d.paired and "Paired" or "",
             bold = d.connected,
             callback = function() self:tap(d) end,
             hold_callback = d.paired and function() self:forget(d) end or nil,
@@ -61,11 +56,9 @@ function BluetoothWidget:refresh()
     if self.menu then self.menu:switchItemTable(nil, self:items()) end
 end
 
-function BluetoothWidget:toggle(on)
-    BT.setOn(on)
-    wait(on and "Turning Bluetooth on ..." or "Turning Bluetooth off ...",
-        function() return BT.isOn() == on end,
-        function() self:refresh() end)
+function BluetoothWidget:turnOn()
+    BT.turnOn()
+    wait("Turning Bluetooth on ...", BT.isOn, function() self:refresh() end)
 end
 
 function BluetoothWidget:scan()
