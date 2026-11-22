@@ -77,3 +77,7 @@ lua5.4 test/verify.lua <lat> <lon> <method> <y> <m> <d> <utc offset>
 - Hijri data: [hijridate](https://github.com/dralshehri/hijridate) 2.6.0 (MIT), official Umm al-Qura tables.
 - Weather: [Open-Meteo](https://open-meteo.com).
 - Fonts: [IBM Plex Sans](https://github.com/IBM/plex) and [Zain](https://fonts.google.com/specimen/Zain), both SIL OFL (licenses in `dashboard.koplugin/fonts`).
+
+## License
+
+MIT, see [LICENSE](LICENSE). The fonts keep their own SIL OFL licenses (`dashboard.koplugin/fonts`).
