@@ -8,15 +8,16 @@ local PluginShare = require("pluginshare")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
 
+local BluetoothWidget = require("bluetoothwidget")
 local Home = require("homemodules")
 local StopwatchWidget = require("stopwatchwidget")
 local SUI = require("suiadapter")
 
 local function blanket(action, module)
-    local ok, lipc = pcall(require, "liblipclua")
+    local ok, lipc = pcall(require, "libopenlipclua")
     if not ok then return end
-    local h = lipc.init("com.github.mykindle.dashboard")
-    if not h then return end
+    local opened, h = pcall(lipc.open_no_name)
+    if not opened or not h then return end
     pcall(h.set_string_property, h, "com.lab126.blanket", action, module)
     h:close()
 end
@@ -30,6 +31,9 @@ if Device:isKindle() and os.getenv("STOP_FRAMEWORK") == "yes" and not Device.das
     local orig_exit = Device.exit
     Device.exit = function(self, ...)
         blanket("load", "ad_screensaver")
+        -- koreader.sh starts the Amazon UI again after we exit, but it stays on a white screen until
+        -- something opens its home. Open it once the UI runs; on a KOReader restart the UI never starts.
+        os.execute([[setsid sh -c 'i=0; until status lab126_gui | grep -q start/running; do i=$((i+1)); [ $i -gt 120 ] && exit; sleep 1; done; sleep 30; lipc-set-prop com.lab126.appmgrd start app://com.lab126.booklet.home' >/dev/null 2>&1 &]])
         return orig_exit(self, ...)
     end
 end
@@ -113,6 +117,23 @@ if not FileChooser.dashboard_sort then
     end
 end
 
+-- A Bluetooth section in the settings tab, after Network.
+for _, path in ipairs({ "ui/elements/filemanager_menu_order", "ui/elements/reader_menu_order" }) do
+    local ok, order = pcall(require, path)
+    if ok and order.setting then
+        local found
+        for _, id in ipairs(order.setting) do
+            if id == "dashboard_bluetooth" then found = true end
+        end
+        for i, id in ipairs(found and {} or order.setting) do
+            if id == "network" then
+                table.insert(order.setting, i + 1, "dashboard_bluetooth")
+                break
+            end
+        end
+    end
+end
+
 local Dashboard = WidgetContainer:extend{
     name = "dashboard",
     is_doc_only = false,
@@ -142,6 +163,12 @@ function Dashboard:onReaderReady(doc_settings)
 end
 
 function Dashboard:addToMainMenu(menu_items)
+    if Device:isKindle() then
+        menu_items.dashboard_bluetooth = {
+            text = _("Bluetooth"),
+            callback = function() BluetoothWidget.show() end,
+        }
+    end
     menu_items.dashboard_adhkar = {
         text = _("Adhkar"),
         sorting_hint = "tools",
