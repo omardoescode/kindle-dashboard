@@ -11,7 +11,7 @@ put() { # put LOCAL REMOTE
     ssh "$K" "mv '$2.new' '$2'"
 }
 
-ssh "$K" "mkdir -p $PLUG/fonts /mnt/us/koreader/screensaver"
+ssh "$K" "mkdir -p $PLUG/fonts /mnt/us/koreader/screensaver && rm -f $PLUG/dashboardwidget.lua"
 for f in dashboard.koplugin/*.lua; do put "$f" "$PLUG/$(basename "$f")"; done
 for f in dashboard.koplugin/fonts/*; do put "$f" "$PLUG/fonts/$(basename "$f")"; done
 
@@ -19,6 +19,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 python3 tools/quote_make.py dashboard.koplugin/fonts "$tmp/quote.png"
 put "$tmp/quote.png" /mnt/us/koreader/screensaver/quote.png
+
 
 put kindle/mykindle-start.sh /mnt/us/koreader/mykindle-start.sh
 put kindle/KOReader-NoUI.sh /mnt/us/documents/KOReader-NoUI.sh

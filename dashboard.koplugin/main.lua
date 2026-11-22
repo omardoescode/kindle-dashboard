@@ -1,32 +1,16 @@
-local DataStorage = require("datastorage")
 local Device = require("device")
 local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local ScreenSaverLockWidget = require("ui/widget/screensaverlockwidget")
-local Dispatcher = require("dispatcher")
 local Event = require("ui/event")
-local LuaSettings = require("luasettings")
 local PluginShare = require("pluginshare")
-local UIManager = require("ui/uimanager")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("gettext")
 
-local DashboardWidget = require("dashboardwidget")
-
-local DEFAULTS = {
-    place = "Minneapolis",
-    lat = 44.9778,
-    lon = -93.2650,
-    method = "isna",
-    madhab = "shafi",
-    clock = "12h",
-    hijri_offset = 0,
-    temperature_unit = "celsius",
-    autostart = true,
-    full_refresh_minutes = 30,
-    weather_minutes = 30,
-}
+local Home = require("homemodules")
+local StopwatchWidget = require("stopwatchwidget")
+local SUI = require("suiadapter")
 
 local function blanket(action, module)
     local ok, lipc = pcall(require, "liblipclua")
@@ -46,6 +30,16 @@ if Device:isKindle() and os.getenv("STOP_FRAMEWORK") == "yes" and not Device.das
     local orig_exit = Device.exit
     Device.exit = function(self, ...)
         blanket("load", "ad_screensaver")
+        return orig_exit(self, ...)
+    end
+end
+
+-- The running stopwatch keeps the Kindle awake; never leave that on after KOReader exits.
+if not Device.dashboard_awake_patched then
+    Device.dashboard_awake_patched = true
+    local orig_exit = Device.exit
+    Device.exit = function(self, ...)
+        StopwatchWidget.keep_awake(false)
         return orig_exit(self, ...)
     end
 end
@@ -71,6 +65,19 @@ if not ScreenSaverLockWidget.dashboard_swipe then
     ScreenSaverLockWidget.onDashboardSwipeUp = function(self, arg, ges)
         if ges.direction == "north" then return self:onClose() end
         return true
+    end
+end
+
+-- KOReader drops the leading zero of 12-hour times ("8:46 PM"); the user wants "08:46 PM" everywhere.
+local datetime = require("datetime")
+if not datetime.dashboard_padded then
+    datetime.dashboard_padded = true
+    local orig_hour = datetime.secondsToHour
+    datetime.secondsToHour = function(seconds, twelve_hour_clock, pad_with_spaces)
+        if twelve_hour_clock and not pad_with_spaces then
+            return os.date("%I:%M ", seconds) .. (os.date("%p", seconds) == "AM" and "AM" or "PM")
+        end
+        return orig_hour(seconds, twelve_hour_clock, pad_with_spaces)
     end
 end
 
@@ -111,25 +118,15 @@ local Dashboard = WidgetContainer:extend{
     is_doc_only = false,
 }
 
-function Dashboard:loadSettings()
-    local store = LuaSettings:open(DataStorage:getSettingsDir() .. "/dashboard.lua")
-    local cfg = {}
-    for k, v in pairs(DEFAULTS) do cfg[k] = store:readSetting(k, v) end
-    return cfg
-end
-
 function Dashboard:init()
-    Dispatcher:registerAction("show_dashboard",
-        { category = "none", event = "ShowDashboard", title = _("Dashboard"), general = true })
     self.ui.menu:registerToMainMenu(self)
-    local first = not PluginShare.dashboard_started
-    PluginShare.dashboard_started = true
-    if first then
+    -- Each file manager and reader start makes new plugin instances; registering again is harmless.
+    SUI.register(Home.modules, Home.actions, Home.bars)
+    if not PluginShare.dashboard_started then
+        PluginShare.dashboard_started = true
+        StopwatchWidget.keep_awake(false)
         local f = io.open("/var/run/mykindle-ko-ready", "w")
         if f then f:close() end
-    end
-    if (first or self.ui.document == nil) and self:loadSettings().autostart then
-        UIManager:nextTick(function() self:onShowDashboard() end)
     end
 end
 
@@ -145,16 +142,11 @@ function Dashboard:onReaderReady(doc_settings)
 end
 
 function Dashboard:addToMainMenu(menu_items)
-    menu_items.dashboard = {
-        text = _("Dashboard"),
+    menu_items.dashboard_adhkar = {
+        text = _("Adhkar"),
         sorting_hint = "tools",
-        callback = function() self:onShowDashboard() end,
+        callback = function() Home.openAdhkar() end,
     }
-end
-
-function Dashboard:onShowDashboard()
-    UIManager:show(DashboardWidget:new{ cfg = self:loadSettings() }, "ui")
-    return true
 end
 
 return Dashboard
