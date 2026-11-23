@@ -79,8 +79,16 @@ function Overlay:redraw(old)
     UIManager:setDirty(self.ui.dialog, function() return "fast", area end)
 end
 
+-- The touch screen loses a finger that slides onto the screen edge, which would end the box there.
+-- A box let go near the edge stays open: the next drag moves its far corner, a tap finishes it.
+local EDGE = Screen:scaleBySize(25)
+
+function Overlay:nearEdge(p)
+    return p.x < EDGE or p.y < EDGE or p.x > self.dimen.w - EDGE or p.y > self.dimen.h - EDGE
+end
+
 function Overlay:onSnipPan(_, ges)
-    local a, b = ges.start_pos, ges.pos
+    local a, b = self.anchor or ges.start_pos, ges.pos
     local old = self.rect
     self.rect = Geom:new{
         x = math.min(a.x, b.x), y = math.min(a.y, b.y),
@@ -90,11 +98,23 @@ function Overlay:onSnipPan(_, ges)
     return true
 end
 
-function Overlay:onSnipRelease()
-    if not self.rect or self.rect.w < MIN or self.rect.h < MIN then
+function Overlay:onSnipRelease(_, ges, end_pos)
+    local r = self.rect
+    if not r or r.w < MIN or r.h < MIN then
         toast("Drag a larger box")
         return true
     end
+    local p = end_pos or ges and ges.pos
+    if p and self:nearEdge(p) then
+        -- Keep the corner opposite to the finger fixed.
+        self.anchor = Geom:new{
+            x = p.x >= r.x + r.w / 2 and r.x or r.x + r.w,
+            y = p.y >= r.y + r.h / 2 and r.y or r.y + r.h,
+        }
+        toast("Keep dragging, or tap to finish")
+        return true
+    end
+    self.anchor = nil
     self:ask()
     return true
 end
@@ -102,13 +122,21 @@ end
 Overlay.onSnipHoldPan = Overlay.onSnipPan
 Overlay.onSnipHoldRelease = Overlay.onSnipRelease
 
-function Overlay:onSnipSwipe()
-    if self.rect then return self:onSnipRelease() end
+function Overlay:onSnipSwipe(_, ges)
+    if self.rect then
+        local rel = ges.relative or { x = 0, y = 0 }
+        return self:onSnipRelease(nil, ges, { x = ges.pos.x + rel.x, y = ges.pos.y + rel.y })
+    end
     toast("Drag slowly to draw the box")
     return true
 end
 
 function Overlay:onSnipTap()
+    if self.anchor and self.rect then
+        self.anchor = nil
+        self:ask()
+        return true
+    end
     toast("Drag a box over the area")
     return true
 end
@@ -116,6 +144,7 @@ end
 function Overlay:clear()
     local old = self.rect
     self.rect = nil
+    self.anchor = nil
     self:redraw(old)
 end
 
