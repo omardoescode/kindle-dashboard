@@ -12,6 +12,7 @@ local BluetoothWidget = require("bluetoothwidget")
 local Home = require("homemodules")
 local StopwatchWidget = require("stopwatchwidget")
 local SUI = require("suiadapter")
+local Snip = require("snip")
 
 local function blanket(action, module)
     local ok, lipc = pcall(require, "libopenlipclua")
@@ -160,6 +161,8 @@ local Dashboard = WidgetContainer:extend{
 
 function Dashboard:init()
     self.ui.menu:registerToMainMenu(self)
+    require("dispatcher"):registerAction("dashboard_snip",
+        { category = "none", event = "DashboardSnip", title = _("Snip area (PDF)"), reader = true })
     -- Each file manager and reader start makes new plugin instances; registering again is harmless.
     SUI.register(Home.modules, Home.actions, Home.bars)
     if not PluginShare.dashboard_started then
@@ -177,8 +180,15 @@ function Dashboard:init()
     end
 end
 
+function Dashboard:onDashboardSnip()
+    Snip.start(self.ui)
+    return true
+end
+
 -- KOReader has no per-language page direction; turn Arabic books right-to-left once, so a manual change stays.
+
 function Dashboard:onReaderReady(doc_settings)
+    if self.ui.paging then Snip.attach(self.ui) end
     if not doc_settings or doc_settings:isTrue("dashboard_rtl_checked") then return end
     doc_settings:makeTrue("dashboard_rtl_checked")
     local props = self.ui.document.getProps and self.ui.document:getProps()
