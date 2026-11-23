@@ -61,7 +61,9 @@ function Lock.state()
     if mins == 0 then return "sad", "Cinder waited for you today" end
     if streak >= 7 then return "cheer", streak .. " days in a row!" end
     if mins >= goal then return "love", "Goal met · " .. streak .. "-day streak" end
-    return "sleepy", mins .. " min today · Good night"
+    local hour = os.date("*t").hour
+    if hour >= 21 or hour < 5 then return "sleepy", mins .. " min today · Good night" end
+    return "happy", mins .. " min today · " .. (goal - mins) .. " min to your goal"
 end
 
 -- The critter pixels as squares of side "scale": its images are a few dozen pixels.

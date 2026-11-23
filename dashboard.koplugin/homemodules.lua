@@ -182,7 +182,9 @@ local MODULES = {
             local gap = Screen:scaleBySize(6)
             local col_w = math.floor(w / #PT.order)
             local cols = HorizontalGroup:new{ align = "top" }
-            for _, key in ipairs(PT.order) do
+            -- Right to left: Fajr on the right.
+            for i = #PT.order, 1, -1 do
+                local key = PT.order[i]
                 local hl = today and key == next_key
                 local fg = hl and WHITE or (key == "sunrise" and look.ink.sub or look.ink.blk)
                 local n_en, n_ar = PT.name(key, wday)
