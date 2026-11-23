@@ -70,6 +70,22 @@ if not ScreenSaverLockWidget.dashboard_swipe then
             return true
         end
     end
+    -- The hint shows only after a wake-up (power button), not on the sleeping lock screen.
+    ScreenSaverLockWidget.showWaitForGestureMessage = function(self)
+        local TextWidget = require("ui/widget/textwidget")
+        local Font = require("ui/font")
+        local UIManager = require("ui/uimanager")
+        local Screen = Device.screen
+        local tw = TextWidget:new{ text = _("Swipe up to read"), face = Font:getFace("cfont", 16) }
+        local size = tw:getSize()
+        local x = math.floor((Screen:getWidth() - size.w) / 2)
+        local y = Screen:getHeight() - Screen:scaleBySize(70)
+        tw:paintTo(Screen.bb, x, y)
+        tw:free()
+        UIManager:setDirty(nil, "ui", Geom:new{ x = x, y = y, w = size.w, h = size.h })
+        UIManager:forceRePaint()
+        self.is_infomessage_visible = true
+    end
     ScreenSaverLockWidget.onDashboardSwipeUp = function(self, arg, ges)
         if ges.direction == "north" then return self:onClose() end
         return true

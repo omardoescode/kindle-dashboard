@@ -100,11 +100,12 @@ function Lock.render()
     local bb = Blitbuffer.new(w, h, Screen.bb:getType())
     bb:fill(Blitbuffer.COLOR_WHITE)
     local cx = math.floor(w / 2)
-    local top = math.floor(h * 0.28)
-    local ch = paintCritter(bb, mood, cx, top, math.floor(w * 0.6))
+    -- Sized by the short side, so it fits in landscape too.
+    local cw = math.floor(math.min(w, h) * 0.6)
+    local top = math.floor((h - cw * 0.73) / 2) - Screen:scaleBySize(30)
+    local ch = paintCritter(bb, mood, cx, top, cw)
     local y = top + ch + Screen:scaleBySize(40)
     paintText(bb, line, Font:getFace("cfont", 26), cx, y)
-    paintText(bb, "Swipe up to read", Font:getFace("cfont", 16), cx, h - Screen:scaleBySize(70))
     return bb
 end
 
@@ -113,8 +114,15 @@ function Lock.install()
     local Screensaver = require("ui/screensaver")
     if Screensaver.dashboard_lock then return end
     Screensaver.dashboard_lock = true
+    -- KOReader turns the screen to portrait for images; Cinder is drawn for the current rotation instead.
+    local orig_portrait = Screensaver.modeExpectsPortrait
+    Screensaver.modeExpectsPortrait = function(self)
+        if self.dashboard_drawn then return false end
+        return orig_portrait(self)
+    end
     local orig_setup = Screensaver.setup
     Screensaver.setup = function(self, event, ...)
+        self.dashboard_drawn = nil
         orig_setup(self, event, ...)
         if event or self.screensaver_type ~= "random_image" then return end
         -- The statistics plugin saves the session on Suspend, which comes after this.
@@ -124,6 +132,7 @@ function Lock.install()
         local ok, bb = pcall(Lock.render)
         if ok and bb then
             self.image = bb
+            self.dashboard_drawn = true
         else
             logger.warn("dashboard: lock screen failed", bb)
         end
