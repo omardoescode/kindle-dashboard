@@ -111,6 +111,29 @@ if not UIManager.dashboard_corners then
     end
 end
 
+-- KOReader's two-finger tap check crashes KOReader when a contact has no first event yet, which happens
+-- when a finger goes down and up within one input frame. Treat that as "not a two-finger tap".
+local GestureDetector = require("device/gesturedetector")
+if not GestureDetector.dashboard_guard then
+    GestureDetector.dashboard_guard = true
+    local orig_new = GestureDetector.newContact
+    GestureDetector.newContact = function(self, slot)
+        local contact = orig_new(self, slot)
+        local Contact = getmetatable(contact)
+        if Contact and Contact.isTwoFingerTap and not Contact.dashboard_guard then
+            Contact.dashboard_guard = true
+            local orig_tap = Contact.isTwoFingerTap
+            Contact.isTwoFingerTap = function(this, buddy)
+                if not (this.initial_tev and this.current_tev and buddy and buddy.initial_tev and buddy.current_tev) then
+                    return false
+                end
+                return orig_tap(this, buddy)
+            end
+        end
+        return contact
+    end
+end
+
 -- KOReader drops the leading zero of 12-hour times ("8:46 PM"); the user wants "08:46 PM" everywhere.
 local datetime = require("datetime")
 if not datetime.dashboard_padded then

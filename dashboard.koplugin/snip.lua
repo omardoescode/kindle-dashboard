@@ -28,15 +28,24 @@ local function toast(text)
     UIManager:show(Notification:new{ text = text })
 end
 
--- The area of a snip annotation on the screen, or nil when its page is not shown.
-local function screenRect(ui, item)
+-- The areas of a snip annotation on the screen, one per shown page part.
+local function screenRects(ui, item)
     local view = ui.view
-    if not view.page_scroll and item.page ~= view.state.page then return end
-    local rect = Geom:new{
-        x = item.pos0.x, y = item.pos0.y,
-        w = item.pos1.x - item.pos0.x, h = item.pos1.y - item.pos0.y,
-    }
-    return view:pageToScreenTransform(item.page, rect)
+    local parts = { [item.page] = item }
+    if item.ext then parts = item.ext end
+    local rects = {}
+    for page = item.pos0.page or item.page, item.pos1.page or item.page do
+        local part = parts[page]
+        if part and (view.page_scroll or page == view.state.page) then
+            local rect = Geom:new{
+                x = part.pos0.x, y = part.pos0.y,
+                w = part.pos1.x - part.pos0.x, h = part.pos1.y - part.pos0.y,
+            }
+            local r = view:pageToScreenTransform(page, rect)
+            if r then table.insert(rects, r) end
+        end
+    end
+    return rects
 end
 
 local Overlay = InputContainer:extend{
@@ -160,23 +169,74 @@ local function render(ui, pageno, p0, p1)
     logger.warn("dashboard: snip render failed", tile)
 end
 
+-- A corner in the margin around a page or in the gap between pages maps to no page: move it toward the
+-- box center, first up or down only, then sideways only, until it lands on a page.
+local function toPage(view, r, x, y)
+    local cx, cy = r.x + r.w / 2, r.y + r.h / 2
+    for _, m in ipairs({ { 0, 1 }, { 1, 0 }, { 1, 1 } }) do
+        for i = 0, 50 do
+            local f = i / 50
+            local p = view:screenToPageTransform({ x = x + (cx - x) * f * m[1], y = y + (cy - y) * f * m[2] })
+            if p then return p end
+        end
+    end
+end
+
 function Snip.save(ui, r)
     local view = ui.view
-    local p0 = view:screenToPageTransform({ x = r.x, y = r.y })
-    local p1 = view:screenToPageTransform({ x = r.x + r.w, y = r.y + r.h })
-    if not p0 or not p1 or p0.page ~= p1.page then
-        return toast("The box must be on one page")
-    end
-    local pageno = p0.page
-    local dim = ui.document:getNativePageDimensions(pageno)
-    p0.x, p0.y = math.max(0, p0.x), math.max(0, p0.y)
-    p1.x, p1.y = math.min(dim.w, p1.x), math.min(dim.h, p1.y)
-    if p1.x <= p0.x or p1.y <= p0.y then
+    local p0 = toPage(view, r, r.x, r.y)
+    local p1 = toPage(view, r, r.x + r.w, r.y + r.h)
+    if not p0 or not p1 then
         return toast("The box must be on the page")
     end
+    local parts
+    if p0.page == p1.page then
+        parts = { { p0 = p0, p1 = p1 } }
+    elseif not view.page_scroll then
+        return toast("The box must be on one page")
+    elseif p1.page > p0.page + 1 then
+        return toast("A snip can cover at most 2 pages")
+    else
+        -- The other two corners give the x of the box on each page.
+        local top_right = view:screenToPageTransform({ x = r.x + r.w, y = r.y })
+        local bottom_left = view:screenToPageTransform({ x = r.x, y = r.y + r.h })
+        -- Part 1 ends and part 2 starts at the page content edge (the margins KOReader crops in its zoom),
+        -- or the frames reach into the other page and the PNG gets a white band.
+        local bb1, bb2 = ui.document:getPageBBox(p0.page), ui.document:getPageBBox(p1.page)
+        parts = {
+            { p0 = p0, p1 = { x = top_right.x, y = bb1 and bb1.y1 or math.huge, page = p0.page, zoom = p0.zoom, rotation = p0.rotation } },
+            { p0 = { x = bottom_left.x, y = bb2 and bb2.y0 or 0, page = p1.page, zoom = p1.zoom, rotation = p1.rotation }, p1 = p1 },
+        }
+    end
+    for i = #parts, 1, -1 do
+        local a, b = parts[i].p0, parts[i].p1
+        local dim = ui.document:getNativePageDimensions(a.page)
+        a.x, a.y = math.max(0, a.x), math.max(0, a.y)
+        b.x, b.y = math.min(dim.w, b.x), math.min(dim.h, b.y)
+        if b.x <= a.x or b.y <= a.y then table.remove(parts, i) end
+    end
+    if #parts == 0 then
+        return toast("The box must be on the page")
+    end
+    p0, p1 = parts[1].p0, parts[#parts].p1
+    local pageno = p0.page
     toast("Saving snip ...")
     UIManager:forceRePaint()
-    local bb = render(ui, pageno, p0, p1)
+    local bb = render(ui, pageno, p0, parts[1].p1)
+    if bb and #parts == 2 then
+        -- Copy the first part: rendering the second one can drop it from the cache.
+        local top = bb:copy()
+        local bottom = render(ui, p1.page, parts[2].p0, p1)
+        bb = nil
+        if bottom then
+            bb = Blitbuffer.new(math.max(top:getWidth(), bottom:getWidth()), top:getHeight() + bottom:getHeight(),
+                top:getType())
+            bb:fill(Blitbuffer.COLOR_WHITE)
+            bb:blitFrom(top, 0, 0)
+            bb:blitFrom(bottom, 0, top:getHeight())
+        end
+        top:free()
+    end
     if not bb then return toast("Could not save the snip") end
 
     local book = select(2, util.splitFilePathName(ui.document.file))
@@ -187,26 +247,34 @@ function Snip.save(ui, r)
     local name = string.format("p%d-%s.png", pageno, os.date("%Y%m%d-%H%M%S"))
     local path = dir .. "/" .. name
     local ok, err = pcall(bb.writePNG, bb, path)
+    if #parts == 2 then bb:free() end
     if not ok then
         logger.warn("dashboard: snip write failed", err)
         return toast("Could not save the snip")
     end
 
     local pos0 = { x = p0.x, y = p0.y, page = pageno, zoom = p0.zoom, rotation = p0.rotation }
-    local pos1 = { x = p1.x, y = p1.y, page = pageno, zoom = p1.zoom, rotation = p1.rotation }
+    local pos1 = { x = p1.x, y = p1.y, page = p1.page, zoom = p0.zoom, rotation = p0.rotation }
+    local ext = #parts == 2 and {} or nil
     local words = {}
-    local got, lines = pcall(ui.document.getPageTextBoxes, ui.document, pageno)
-    for _, line in ipairs(got and lines or {}) do
-        for _, w in ipairs(line) do
-            local cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
-            if w.word and cx >= p0.x and cx <= p1.x and cy >= p0.y and cy <= p1.y then
-                table.insert(words, w.word)
+    for _, part in ipairs(parts) do
+        local a, b = part.p0, part.p1
+        if ext then
+            ext[a.page] = { pos0 = { x = a.x, y = a.y, page = a.page }, pos1 = { x = b.x, y = b.y, page = a.page } }
+        end
+        local got, lines = pcall(ui.document.getPageTextBoxes, ui.document, a.page)
+        for _, line in ipairs(got and lines or {}) do
+            for _, w in ipairs(line) do
+                local cx, cy = (w.x0 + w.x1) / 2, (w.y0 + w.y1) / 2
+                if w.word and cx >= a.x and cx <= b.x and cy >= a.y and cy <= b.y then
+                    table.insert(words, w.word)
+                end
             end
         end
     end
     local text = util.cleanupSelectedText(table.concat(words, " "))
     local item = {
-        page = pageno, pos0 = pos0, pos1 = pos1,
+        page = pageno, pos0 = pos0, pos1 = pos1, ext = ext,
         text = text ~= "" and text or "[snip]",
         note = "snip: " .. name,
         drawer = DRAWER,
@@ -215,6 +283,7 @@ function Snip.save(ui, r)
     }
     local index = ui.annotation:addItem(item)
     view.highlight.page_boxes[pageno] = nil
+    view.highlight.page_boxes[p1.page] = nil
     view.footer:maybeUpdateFooter()
     ui:handleEvent(Event:new("AnnotationsModified", { item, nb_highlights_added = 1, index_modified = index }))
     UIManager:setDirty(ui.dialog, "ui")
@@ -266,8 +335,9 @@ function Snip.attach(ui)
         paintTo = function(_, bb, x, y)
             for _, item in ipairs(ui.annotation.annotations) do
                 if item.drawer == DRAWER then
-                    local r = screenRect(ui, item)
-                    if r then bb:paintBorder(x + r.x, y + r.y, r.w, r.h, FRAME, Blitbuffer.COLOR_BLACK) end
+                    for _, r in ipairs(screenRects(ui, item)) do
+                        bb:paintBorder(x + r.x, y + r.y, r.w, r.h, FRAME, Blitbuffer.COLOR_BLACK)
+                    end
                 end
             end
         end,
@@ -282,8 +352,11 @@ function Snip.attach(ui)
         handler = function(ges)
             for _, item in ipairs(ui.annotation.annotations) do
                 if item.drawer == DRAWER and item.snip then
-                    local r = screenRect(ui, item)
-                    if r and ges.pos:intersectWith(r) then
+                    local hit
+                    for _, r in ipairs(screenRects(ui, item)) do
+                        hit = hit or ges.pos:intersectWith(r)
+                    end
+                    if hit then
                         if lfs.attributes(item.snip, "mode") ~= "file" then
                             toast("The snip image is missing")
                         else
