@@ -6,6 +6,7 @@ local Font = require("ui/font")
 local RenderImage = require("ui/renderimage")
 local TextWidget = require("ui/widget/textwidget")
 local logger = require("logger")
+local time = require("ui/time")
 
 local Screen = Device.screen
 local Lock = {}
@@ -96,9 +97,25 @@ local function paintText(bb, text, face, cx, y)
     return size.h
 end
 
+-- powerd puts the Kindle to sleep a few seconds after it asks KOReader to show the lock screen, without
+-- waiting. Reading the statistics and the book files then can be too slow, so that work runs while awake,
+-- every 2 minutes; at sleep only the drawing is left.
+local cached
+local REFRESH = 120
+
+local function refresh()
+    local ok, mood, line = pcall(Lock.state)
+    if ok then
+        cached = { mood = mood, line = line }
+    else
+        logger.warn("dashboard: lock state failed", mood)
+    end
+end
+
 function Lock.render()
     local w, h = Screen:getWidth(), Screen:getHeight()
-    local mood, line = Lock.state()
+    if not cached then refresh() end
+    local mood, line = cached.mood, cached.line
     local bb = Blitbuffer.new(w, h, Screen.bb:getType())
     bb:fill(Blitbuffer.COLOR_WHITE)
     local cx = math.floor(w / 2)
@@ -127,18 +144,24 @@ function Lock.install()
         self.dashboard_drawn = nil
         orig_setup(self, event, ...)
         if event or self.screensaver_type ~= "random_image" then return end
-        -- The statistics plugin saves the session on Suspend, which comes after this.
-        local ReaderUI = require("apps/reader/readerui")
-        local stats_plugin = ReaderUI.instance and ReaderUI.instance.statistics
-        if stats_plugin and stats_plugin.insertDB then pcall(stats_plugin.insertDB, stats_plugin) end
+        local start = time.now()
         local ok, bb = pcall(Lock.render)
         if ok and bb then
             self.image = bb
             self.dashboard_drawn = true
+            logger.info("dashboard: lock screen drawn in", time.to_ms(time.since(start)), "ms")
         else
             logger.warn("dashboard: lock screen failed", bb)
         end
     end
+    local UIManager = require("ui/uimanager")
+    local function tick()
+        local start = time.now()
+        refresh()
+        logger.dbg("dashboard: lock state in", time.to_ms(time.since(start)), "ms")
+        UIManager:scheduleIn(REFRESH, tick)
+    end
+    UIManager:scheduleIn(5, tick)
 end
 
 return Lock
