@@ -1,6 +1,6 @@
 # kindle-dashboard
 
-Prayer times, weather, a focus stopwatch and adhkar for a jailbroken Kindle Paperwhite (12th gen / PW6), as [KOReader](https://koreader.rocks) plugin modules for the [Simple UI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) Home screen. It also has a quote lock screen.
+Prayer times, weather, a focus stopwatch and adhkar for a jailbroken Kindle Paperwhite (12th gen / PW6), as [KOReader](https://koreader.rocks) plugin modules for the [Simple UI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) Home screen. It also has a lock screen with Cinder, the critter, in a mood that follows your reading.
 
 **Simple UI is required.** This plugin adds modules and quick actions to Simple UI through its public module registry and quick-action API. It does not include Simple UI code, so this code stays MIT. Without Simple UI the plugin loads, but it shows no modules.
 
@@ -32,7 +32,7 @@ Simple UI is the start screen and the screen after a book closes (Simple UI sett
 - **History**: newest first. Tap a session to change its label, date, start or end, or to delete it. **+ Add past session** adds one by hand. An end time before the start time is on the next day. Times in the future or more than 12 months ago are rejected. Sessions older than 12 months (day totals) cannot be edited.
 - **Idle view**: while the stopwatch runs and nobody touches it for `focus_idle_seconds`, it shows the label, the running time (h:mm:ss) and the weekly goal left, turned 90° clockwise. Only the time area is redrawn each second. A touch goes back to the stopwatch and does nothing else. While it runs, the stopwatch keeps the Kindle awake (KOReader auto-suspend paused, powerd `preventScreenSaver`); the power button still sleeps it.
 - **Session labels and weekly goals**: Start asks for a label (default: Work, Uni Study, Research Work, Personal Study; the last used label is first). The stopwatch shows one row per label with the time done this week (from Monday) and the time left to its weekly goal, or "Goal met". Tap **Labels** (when the stopwatch is not running) to add, rename or remove a label and to set its goal in hours. A removed label leaves the Start list only: its past sessions keep their label and still count.
-- **Quote lock screen** while the device sleeps, unlocked with a swipe up.
+- **Cinder lock screen** while the device sleeps, unlocked with a swipe up. It is drawn at each sleep from KOReader's reading statistics: party (a book finished today), sad (no reading today), cheer (a 7-day streak or more), heart (daily goal met) or sleepy, with one line about today.
 - **Arabic books** turn pages right-to-left automatically.
 - **Bluetooth** (Settings tab → Bluetooth, after Network): turn Bluetooth on or off, scan, pair, connect, disconnect, and forget (hold) devices, through Amazon's `com.lab126.btfd` over lipc. No Amazon UI needed. Works with [KinAMP](https://github.com/kbarni/KinAMP) for music while reading.
 - **Home folder sort**: the home folder is sorted by "last opened" (reading history).
@@ -103,7 +103,7 @@ Then start KOReader from the library tile "KOReader (no Amazon UI)", or reboot.
 | `sessions` | Sessions of the last 12 months: `start`, `stop`, `secs`, `label`. `secs` = `stop - start`; older sessions with pauses keep their active time until their times are edited. Sessions without a label count as "No label" |
 | `days` | Older sessions as `days["YYYY-MM-DD"][label] = secs` |
 
-The lock-screen quote is drawn by `tools/quote_make.py` (run by `deploy.sh`). Edit it to change the quote.
+The daily goal of the lock screen is `dashboard_daily_goal_minutes` in `koreader/settings.reader.lua` (default 30). If the lock screen cannot be drawn, KOReader shows the quote image from `tools/quote_make.py` (run by `deploy.sh`).
 
 ## Tests
 

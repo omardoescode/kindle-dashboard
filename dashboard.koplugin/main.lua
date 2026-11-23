@@ -13,6 +13,7 @@ local Home = require("homemodules")
 local StopwatchWidget = require("stopwatchwidget")
 local SUI = require("suiadapter")
 local Snip = require("snip")
+local Lock = require("lockscreen")
 
 local function blanket(action, module)
     local ok, lipc = pcall(require, "libopenlipclua")
@@ -48,6 +49,8 @@ if not Device.dashboard_awake_patched then
         return orig_exit(self, ...)
     end
 end
+
+Lock.install()
 
 -- KOReader has no plain swipe-up gesture; add one so the sleep screen unlocks like the Amazon one.
 if not ScreenSaverLockWidget.dashboard_swipe then
