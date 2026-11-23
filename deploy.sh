@@ -20,11 +20,11 @@ trap 'rm -rf "$tmp"' EXIT
 python3 tools/quote_make.py dashboard.koplugin/fonts "$tmp/quote.png"
 put "$tmp/quote.png" /mnt/us/koreader/screensaver/quote.png
 
-# Our phoenix critter "Cinder" for Simple UI's Tiny Critter module (its folder name gives its name).
-CINDER=/mnt/us/koreader/settings/simpleui/sui_critters/cinder
-python3 -I tools/critter_phoenix.py tools/assets/phoenix-cc0-spritesheet.png "$tmp/cinder"
-ssh "$K" "mkdir -p $CINDER"
-for f in "$tmp"/cinder/*.png; do put "$f" "$CINDER/$(basename "$f")"; done
+# Our phoenix critter "Anqa" for Simple UI's Tiny Critter module (its folder name gives its name).
+ANQA=/mnt/us/koreader/settings/simpleui/sui_critters/anqa
+python3 -I tools/critter_phoenix.py tools/assets/phoenix-cc0-spritesheet.png "$tmp/anqa"
+ssh "$K" "mkdir -p $ANQA"
+for f in "$tmp"/anqa/*.png; do put "$f" "$ANQA/$(basename "$f")"; done
 
 put kindle/mykindle-start.sh /mnt/us/koreader/mykindle-start.sh
 put kindle/KOReader-NoUI.sh /mnt/us/documents/KOReader-NoUI.sh

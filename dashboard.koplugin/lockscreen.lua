@@ -1,4 +1,4 @@
--- The lock screen: Cinder the critter, in a mood that follows today's reading, with one line about it.
+-- The lock screen: Anqa the critter, in a mood that follows today's reading, with one line about it.
 local Blitbuffer = require("ffi/blitbuffer")
 local DataStorage = require("datastorage")
 local Device = require("device")
@@ -58,7 +58,7 @@ function Lock.state()
     local goal = G_reader_settings:readSetting("dashboard_daily_goal_minutes") or 30
     local done = finishedToday()
     if done then return "party", "Finished: " .. done end
-    if mins == 0 then return "sad", "Cinder waited for you today" end
+    if mins == 0 then return "sad", "Anqa waited for you today" end
     if streak >= 7 then return "cheer", streak .. " days in a row!" end
     if mins >= goal then return "love", "Goal met · " .. streak .. "-day streak" end
     local hour = os.date("*t").hour
@@ -68,7 +68,7 @@ end
 
 -- The critter pixels as squares of side "scale": its images are a few dozen pixels.
 local function paintCritter(bb, mood, cx, top, width)
-    local path = DataStorage:getSettingsDir() .. "/simpleui/sui_critters/cinder/" .. mood .. ".png"
+    local path = DataStorage:getSettingsDir() .. "/simpleui/sui_critters/anqa/" .. mood .. ".png"
     local img = RenderImage:renderImageFile(path, false)
     if not img then return 0 end
     local w, h = img:getWidth(), img:getHeight()
@@ -111,12 +111,12 @@ function Lock.render()
     return bb
 end
 
--- KOReader shows a random image from the lock screen folder; show Cinder instead.
+-- KOReader shows a random image from the lock screen folder; show Anqa instead.
 function Lock.install()
     local Screensaver = require("ui/screensaver")
     if Screensaver.dashboard_lock then return end
     Screensaver.dashboard_lock = true
-    -- KOReader turns the screen to portrait for images; Cinder is drawn for the current rotation instead.
+    -- KOReader turns the screen to portrait for images; Anqa is drawn for the current rotation instead.
     local orig_portrait = Screensaver.modeExpectsPortrait
     Screensaver.modeExpectsPortrait = function(self)
         if self.dashboard_drawn then return false end

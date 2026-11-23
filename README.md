@@ -1,6 +1,6 @@
 # kindle-dashboard
 
-Prayer times, weather, a focus stopwatch and adhkar for a jailbroken Kindle Paperwhite (12th gen / PW6), as [KOReader](https://koreader.rocks) plugin modules for the [Simple UI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) Home screen. It also has a lock screen with Cinder, the critter, in a mood that follows your reading.
+Prayer times, weather, a focus stopwatch and adhkar for a jailbroken Kindle Paperwhite (12th gen / PW6), as [KOReader](https://koreader.rocks) plugin modules for the [Simple UI](https://github.com/doctorhetfield-cmd/simpleui.koplugin) Home screen. It also has a lock screen with Anqa, the critter, in a mood that follows your reading.
 
 **Simple UI is required.** This plugin adds modules and quick actions to Simple UI through its public module registry and quick-action API. It does not include Simple UI code, so this code stays MIT. Without Simple UI the plugin loads, but it shows no modules.
 
@@ -32,7 +32,7 @@ Simple UI is the start screen and the screen after a book closes (Simple UI sett
 - **History**: newest first. Tap a session to change its label, date, start or end, or to delete it. **+ Add past session** adds one by hand. An end time before the start time is on the next day. Times in the future or more than 12 months ago are rejected. Sessions older than 12 months (day totals) cannot be edited.
 - **Idle view**: while the stopwatch runs and nobody touches it for `focus_idle_seconds`, it shows the label, the running time (h:mm:ss) and the weekly goal left, turned 90° clockwise. Only the time area is redrawn each second. A touch goes back to the stopwatch and does nothing else. While it runs, the stopwatch keeps the Kindle awake (KOReader auto-suspend paused, powerd `preventScreenSaver`); the power button still sleeps it.
 - **Session labels and weekly goals**: Start asks for a label (default: Work, Uni Study, Research Work, Personal Study; the last used label is first). The stopwatch shows one row per label with the time done this week (from Monday) and the time left to its weekly goal, or "Goal met". Tap **Labels** (when the stopwatch is not running) to add, rename or remove a label and to set its goal in hours. A removed label leaves the Start list only: its past sessions keep their label and still count.
-- **Cinder lock screen** while the device sleeps, unlocked with a swipe up. It is drawn at each sleep from KOReader's reading statistics: party (a book finished today), sad (no reading today), cheer (a 7-day streak or more), heart (daily goal met) or sleepy, with one line about today.
+- **Anqa lock screen** while the device sleeps, unlocked with a swipe up. It is drawn at each sleep from KOReader's reading statistics: party (a book finished today), sad (no reading today), cheer (a 7-day streak or more), heart (daily goal met) or sleepy, with one line about today.
 - **Arabic books** turn pages right-to-left automatically.
 - **Bluetooth** (Settings tab → Bluetooth, after Network): turn Bluetooth on or off, scan, pair, connect, disconnect, and forget (hold) devices, through Amazon's `com.lab126.btfd` over lipc. No Amazon UI needed. Works with [KinAMP](https://github.com/kbarni/KinAMP) for music while reading.
 - **Home folder sort**: the home folder is sorted by "last opened" (reading history).
@@ -118,7 +118,7 @@ luajit test/focusstore_test.lua
 - Prayer-time math: the PrayTimes algorithm.
 - Hijri data: [hijridate](https://github.com/dralshehri/hijridate) 2.6.0 (MIT), official Umm al-Qura tables.
 - Weather: [Open-Meteo](https://open-meteo.com).
-- Critter "Cinder": based on "Pixel Phoenix" by [zonked](https://opengameart.org/content/pixel-phoenix) (CC0), sprite sheet in `tools/assets`. `tools/critter_phoenix.py` (run by `deploy.sh`) makes it gray for e-ink and draws its faces, crest, tail and mood symbols.
+- Critter "Anqa": based on "Pixel Phoenix" by [zonked](https://opengameart.org/content/pixel-phoenix) (CC0), sprite sheet in `tools/assets`. `tools/critter_phoenix.py` (run by `deploy.sh`) makes it gray for e-ink and draws its faces, crest, tail and mood symbols.
 - Fonts: [IBM Plex Sans](https://github.com/IBM/plex) and [Zain](https://fonts.google.com/specimen/Zain), both SIL OFL (licenses in `dashboard.koplugin/fonts`).
 - Adhkar text: [Morning-And-Evening-Adhkar-DB](https://github.com/Seen-Arabic/Morning-And-Evening-Adhkar-DB) by Seen Arabic (MIT, `ar.json` at commit 39d422f; license in `adhkardata.lua`), from the book "حصن المسلم من أذكار الكتاب والسنة" by Sa'id bin Ali bin Wahf al-Qahtani. Changes: the opening line "الحمد لله وحده…" removed (it is not a dhikr); Al-Ikhlas, Al-Falaq and An-Nas joined in one dhikr said 3 times, with the basmala, as in the book; diacritics added to the evening variants that had none; typos fixed (الْمُلْكُ, الذُّنُوبَ, نَبِيِّنَا, the evening "أمسينا وأمسى الملك لله رب العالمين"); sura and ayah numbers moved from the text to the reference; book-font artifacts and repeated reference text removed.
 

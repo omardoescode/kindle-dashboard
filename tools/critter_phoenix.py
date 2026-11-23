@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Makes "Cinder", the phoenix critter for Simple UI's Tiny Critter, from the "Pixel Phoenix" sprite sheet
+"""Makes "Anqa", the phoenix critter for Simple UI's Tiny Critter, from the "Pixel Phoenix" sprite sheet
 by zonked (CC0, https://opengameart.org/content/pixel-phoenix): one gray PNG per mood, all on one canvas.
 The face, the flame crest, the tail plumes, the wing flames and the mood symbols are drawn here.
 
 Usage: python3 -I tools/critter_phoenix.py tools/assets/phoenix-cc0-spritesheet.png OUT_DIR
-Copy OUT_DIR to <KOReader settings>/simpleui/sui_critters/cinder/ (deploy.sh does it).
+Copy OUT_DIR to <KOReader settings>/simpleui/sui_critters/anqa/ (deploy.sh does it).
 """
 import os
 import sys
