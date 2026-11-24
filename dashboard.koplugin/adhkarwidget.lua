@@ -235,6 +235,14 @@ function AdhkarWidget:onCount()
 end
 
 function AdhkarWidget:onSwipeText(ges)
+    local st = self.st
+    if ges.direction == "east" then
+        if not st.done then self:act(Adhkar.skip) end
+        return true
+    elseif ges.direction == "west" then
+        if st.done or st.index > 1 then self:act(Adhkar.back) end
+        return true
+    end
     if not self.scrolls then return true end
     if ges.direction == "north" then
         self.dhikr:scrollDown()
