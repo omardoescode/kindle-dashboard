@@ -34,7 +34,7 @@ Simple UI is the start screen and the screen after a book closes (Simple UI sett
 - **Session labels and weekly goals**: Start asks for a label (default: Work, Uni Study, Research Work, Personal Study; the last used label is first). The stopwatch shows one row per label with the time done this week (from Monday) and the time left to its weekly goal, or "Goal met". Tap **Labels** (when the stopwatch is not running) to add, rename or remove a label and to set its goal in hours. A removed label leaves the Start list only: its past sessions keep their label and still count.
 - **Anqa lock screen** while the device sleeps, unlocked with a swipe up. It is drawn at each sleep from KOReader's reading statistics: party (a book finished today), sad (no reading today), cheer (a 7-day streak or more), heart (daily goal met) or sleepy, with one line about today in Geist Pixel (Simple UI's pixel font, at a size that keeps its pixels sharp). While adhkar are due, a second line says "Don't forget your morning azkar" (or evening). Anqa wears a scarf at 5 books finished this year, glasses at 10, and a crown while the reading streak is 30 days or more.
 
-- **Home critter lines**: Simple UI's critter on Home also says, from KOReader's reading statistics, the week's reading time and pages on Fridays (week from Saturday), with the best day and the change from last week, and when you will finish the current book at your pace of the last 7 days.
+- **Home critter lines**: Simple UI's critter on Home also says, from KOReader's reading statistics, the week's reading time and pages on Fridays (week from Saturday), with the best day and the change from last week, when you will finish the current book at your pace of the last 7 days, and "Time to sleep" after `bedtime`.
 
 - **Bottom bar marks**: the Focus tab shows the running time (h:mm) and a dot while focus runs and the tab of a Custom Screen with the Adhkar reminder module shows a dot while adhkar are due. They are checked each minute.
 - **Arabic books** turn pages right-to-left automatically.
@@ -96,6 +96,7 @@ Then start KOReader from the library tile "KOReader (no Amazon UI)", or reboot.
 | `temperature_unit` | `celsius` | `celsius` or `fahrenheit` |
 | `full_refresh_minutes` | `30` | A module area gets a flashing refresh after this many minute updates |
 | `weather_minutes` | `30` | Weather update interval |
+| `bedtime` | `23:00` | From this time until 5 AM, the Home critter sometimes says "Time to sleep" |
 | `focus_idle_seconds` | `5` | Seconds without a touch before the running stopwatch shows the idle view |
 
 `koreader/settings/dashboard_focus.lua` holds the stopwatch data. Edit labels and goals on the device with **Labels**:

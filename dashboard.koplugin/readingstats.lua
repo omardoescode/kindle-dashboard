@@ -68,6 +68,22 @@ local function forecast(db, now)
     }
 end
 
+-- From Stats.bedtime ("HH:MM") until 5 AM.
+local function sleep(_, now)
+    local h, m = tostring(Stats.bedtime or ""):match("^(%d+):(%d+)$")
+    if not h then return end
+    local t = os.date("*t", now)
+    local mins, bed = t.hour * 60 + t.min, tonumber(h) * 60 + tonumber(m)
+    local late = bed >= 300 and (mins >= bed or mins < 300) or (mins >= bed and mins < 300)
+    if not late then return end
+    return {
+        id = "dash_sleep",
+        mood = "sleepy",
+        text = "Time to sleep",
+        sub = "Your book will still be here tomorrow.",
+    }
+end
+
 local cache, cache_at = {}, 0
 
 -- The lines that fit now; the database is read at most every 5 minutes.
@@ -79,7 +95,7 @@ function Stats.lines()
         local SQ3 = require("lua-ljsqlite3/init")
         local db = SQ3.open(DataStorage:getSettingsDir() .. "/statistics.sqlite3")
         local lines = {}
-        for _, fn in ipairs({ week, forecast }) do
+        for _, fn in ipairs({ week, forecast, sleep }) do
             local ok2, line = pcall(fn, db, now)
             if ok2 and line then table.insert(lines, line)
             elseif not ok2 then logger.warn("dashboard: critter line failed", line) end

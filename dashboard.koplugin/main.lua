@@ -210,7 +210,9 @@ function Dashboard:init()
     SUI.tabMark("dash_stopwatch", Home.focusRunning)
     SUI.screenMark("dash_adhkar", Home.adhkarDue)
     SUI.watchBar(Home.focusLabel)
-    SUI.critterLines(require("readingstats").lines)
+    local Stats = require("readingstats")
+    Stats.bedtime = Home.cfg().bedtime
+    SUI.critterLines(Stats.lines)
     Lock.adhkarSet = Home.adhkarSet
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true

@@ -46,6 +46,7 @@ local DEFAULTS = {
     full_refresh_minutes = 30,
     weather_minutes = 30,
     focus_idle_seconds = 5,
+    bedtime = "23:00",
 }
 
 local Home = {}
