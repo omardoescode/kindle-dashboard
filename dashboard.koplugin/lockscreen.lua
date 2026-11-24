@@ -89,12 +89,16 @@ local function paintCritter(bb, mood, cx, top, width)
     return h * s
 end
 
-local function paintText(bb, text, face, cx, y)
-    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(40) }
+-- pad: draws white text on a black box with that padding.
+local function paintText(bb, text, face, cx, y, pad)
+    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(40),
+        fgcolor = pad and Blitbuffer.COLOR_WHITE or nil }
     local size = tw:getSize()
-    tw:paintTo(bb, cx - math.floor(size.w / 2), y)
+    local x = cx - math.floor(size.w / 2)
+    if pad then bb:paintRect(x - pad, y, size.w + 2 * pad, size.h + 2 * pad, Blitbuffer.COLOR_BLACK) end
+    tw:paintTo(bb, x, y + (pad or 0))
     tw:free()
-    return size.h
+    return size.h + 2 * (pad or 0)
 end
 
 -- powerd puts the Kindle to sleep a few seconds after it asks KOReader to show the lock screen, without
@@ -131,7 +135,9 @@ function Lock.render()
     local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
     y = y + paintText(bb, line, face, cx, y)
-    if cached.adhkar then paintText(bb, "Don't forget your azkar", face, cx, y + Screen:scaleBySize(12)) end
+    if cached.adhkar then
+        paintText(bb, "Don't forget your azkar", face, cx, y + Screen:scaleBySize(16), Screen:scaleBySize(6))
+    end
     return bb
 end
 
