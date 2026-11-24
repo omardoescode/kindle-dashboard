@@ -118,10 +118,10 @@ local ACCESSORIES = {
     } },
     crown = { at = { 5, -3 }, rows = {
         "X...X...X",
-        "XX.XLX.XX",
-        "XLXLLLXLX",
-        "XLLLLLLLX",
-        "XDLDLDLDX",
+        "XX.XWX.XX",
+        "XWXWWWXWX",
+        "XWWWWWWWX",
+        "XWDWDWDWX",
         "XXXXXXXXX",
     } },
 }
