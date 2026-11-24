@@ -53,9 +53,26 @@ local function finishedToday()
     end
 end
 
-function Lock.state()
-    local secs, streak = stats()
-    local mins = math.floor(secs / 60)
+-- Books opened before this year cannot have been finished in it, and the history is newest first.
+local function finishedThisYear()
+    local ReadHistory = require("readhistory")
+    local DocSettings = require("docsettings")
+    local year = os.date("*t").year
+    local since = os.time{ year = year, month = 1, day = 1, hour = 0 }
+    local n = 0
+    for _, h in ipairs(ReadHistory.hist or {}) do
+        if (h.time or 0) < since then break end
+        if h.file and DocSettings:hasSidecarFile(h.file) then
+            local summary = DocSettings:open(h.file):readSetting("summary")
+            if summary and summary.status == "complete" and tostring(summary.modified):sub(1, 4) == tostring(year) then
+                n = n + 1
+            end
+        end
+    end
+    return n
+end
+
+local function mood(mins, streak)
     local goal = G_reader_settings:readSetting("dashboard_daily_goal_minutes") or 30
     local done = finishedToday()
     if done then return "party", "Finished: " .. done end
@@ -67,8 +84,52 @@ function Lock.state()
     return "happy", mins .. " min today · " .. (goal - mins) .. " min to your goal"
 end
 
+function Lock.state()
+    local secs, streak = stats()
+    local m, line = mood(math.floor(secs / 60), streak)
+    local ok, books = pcall(finishedThisYear)
+    if not ok then logger.warn("dashboard: books this year failed", books) end
+    books = ok and books or 0
+    local acc = {}
+    if books >= 5 then acc[#acc + 1] = "scarf" end
+    if books >= 10 then acc[#acc + 1] = "glasses" end
+    if streak >= 30 then acc[#acc + 1] = "crown" end
+    return m, line, acc
+end
+
+-- In the critter's own pixels, from the top left "at" (column, row); a crown sits above the image.
+local ACCESSORIES = {
+    scarf = { at = { 2, 10 }, rows = {
+        "XXXXXXXXXXXXX",
+        "XLLDDLLDDLLDX",
+        "XLLDDLLDDLLDX",
+        "XXXXXXXXXXXXX",
+        "XLLX",
+        "XDDX",
+        "XXXX",
+    } },
+    glasses = { at = { 5, 4 }, rows = {
+        ".XXXXX.",
+        "X.....X",
+        "X.....XX",
+        "X.....X",
+        "X.....X",
+        ".XXXXX.",
+    } },
+    crown = { at = { 5, -3 }, rows = {
+        "X...X...X",
+        "XX.XLX.XX",
+        "XLXLLLXLX",
+        "XLLLLLLLX",
+        "XDLDLDLDX",
+        "XXXXXXXXX",
+    } },
+}
+-- The critter's own gray levels.
+local TONES = { X = 0, D = 85, G = 136, L = 187, W = 238 }
+
 -- The critter pixels as squares of side "scale": its images are a few dozen pixels.
-local function paintCritter(bb, mood, cx, top, width)
+local function paintCritter(bb, mood, cx, top, width, accessories)
     local path = DataStorage:getSettingsDir() .. "/simpleui/sui_critters/anqa/" .. mood .. ".png"
     local img = RenderImage:renderImageFile(path, false)
     if not img then return 0 end
@@ -86,6 +147,17 @@ local function paintCritter(bb, mood, cx, top, width)
         end
     end
     flat:free()
+    for _, name in ipairs(accessories or {}) do
+        local a = ACCESSORIES[name]
+        for dy, row in ipairs(a.rows) do
+            for dx = 1, #row do
+                local v = TONES[row:sub(dx, dx)]
+                if v then
+                    bb:paintRect(x0 + (a.at[1] + dx - 1) * s, top + (a.at[2] + dy - 1) * s, s, s, Blitbuffer.Color8(v))
+                end
+            end
+        end
+    end
     return h * s
 end
 
@@ -108,10 +180,10 @@ local cached
 local REFRESH = 120
 
 local function refresh()
-    local ok, mood, line = pcall(Lock.state)
+    local ok, mood, line, acc = pcall(Lock.state)
     if ok then
-        local due = Lock.adhkarDue and select(2, pcall(Lock.adhkarDue))
-        cached = { mood = mood, line = line, adhkar = due == true }
+        local okSet, set = pcall(Lock.adhkarSet or function() end)
+        cached = { mood = mood, line = line, accessories = acc, adhkar = okSet and type(set) == "string" and set or nil }
     else
         logger.warn("dashboard: lock state failed", mood)
     end
@@ -127,7 +199,7 @@ function Lock.render()
     -- Sized by the short side, so it fits in landscape too.
     local cw = math.floor(math.min(w, h) * 0.6)
     local top = math.floor((h - cw * 0.73) / 2) - Screen:scaleBySize(30)
-    local ch = paintCritter(bb, mood, cx, top, cw)
+    local ch = paintCritter(bb, mood, cx, top, cw, cached.accessories)
     local y = top + ch + Screen:scaleBySize(40)
     -- Geist Pixel, like the critter's bubble in Simple UI; Simple UI ships it and adds it to the font list.
     -- Its pixels are 1/13 of its size: other sizes blur them to gray.
@@ -136,7 +208,7 @@ function Lock.render()
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
     y = y + paintText(bb, line, face, cx, y)
     if cached.adhkar then
-        paintText(bb, "Don't forget your azkar", face, cx, y + Screen:scaleBySize(16), Screen:scaleBySize(6))
+        paintText(bb, "Don't forget your " .. cached.adhkar .. " azkar", face, cx, y + Screen:scaleBySize(16), Screen:scaleBySize(6))
     end
     return bb
 end

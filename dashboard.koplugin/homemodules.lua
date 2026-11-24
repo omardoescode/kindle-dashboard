@@ -435,6 +435,7 @@ end
 Home.modules = MODULES
 Home.focusRunning = function() return focus_data().state.started ~= nil end
 Home.adhkarDue = function() return MODULES[4].due(os.time()) ~= nil end
+Home.adhkarSet = function() return MODULES[4].due(os.time()) end
 Home.focusLabel = function()
     local s = focus_data().state
     if not s.started then return "Focus" end

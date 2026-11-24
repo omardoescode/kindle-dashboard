@@ -169,6 +169,44 @@ function SUI.syncBars(repaint)
     end
 end
 
+-- Our lines for Simple UI's Home critter: lines() returns { id, text, sub, mood } tables. Each line is said
+-- the first time it fits on a day; after that it comes up now and then among Simple UI's own phrases.
+function SUI.critterLines(lines)
+    local Phrases = load("modules/critter/phrases")
+    if not Phrases or Phrases.dashboard_lines then return end
+    if type(Phrases.pick) ~= "function" then
+        logger.warn("dashboard: Simple UI API changed, missing critter Phrases.pick")
+        return
+    end
+    Phrases.dashboard_lines = true
+    local said = {}
+    local orig = Phrases.pick
+    Phrases.pick = function(f, opts, celebrate)
+        local phrase = orig(f, opts, celebrate)
+        if celebrate and phrase then return phrase end
+        local ok, list = pcall(lines)
+        if not ok or type(list) ~= "table" or #list == 0 then return phrase end
+        local today, line = os.date("%Y-%m-%d")
+        for _, l in ipairs(list) do
+            if said[l.id] ~= today then line = l break end
+        end
+        if not line and phrase and math.random(4) > 1 then return phrase end
+        line = line or list[math.random(#list)]
+        said[line.id] = today
+        local source = { id = line.id, cat = "dashboard", mood = line.mood }
+        source.when = function()
+            local ok2, now = pcall(lines)
+            for _, l in ipairs(ok2 and now or {}) do
+                if l.id == line.id then line = l return true end
+            end
+            return false
+        end
+        source.text = function() return line.text end
+        source.sub = function() return line.sub end
+        return { text = line.text, sub = line.sub, mood = line.mood, source = source }
+    end
+end
+
 -- Simple UI keeps the tab of the screen below active; the adhkar screen opened from a menu belongs to no tab.
 function SUI.clearActiveTab(widget)
     local Bottombar = load("screens/sui_bottombar")

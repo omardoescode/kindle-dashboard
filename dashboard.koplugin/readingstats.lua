@@ -1,0 +1,89 @@
+-- Lines for Simple UI's Home critter from KOReader's reading statistics: the week's summary
+-- (on Friday, the last day of a Saturday-to-Friday week) and when the current book will be finished.
+local DataStorage = require("datastorage")
+local logger = require("logger")
+
+local Stats = {}
+
+local function hm(secs)
+    local m = math.floor(secs / 60)
+    if m < 60 then return m .. " min" end
+    return math.floor(m / 60) .. " h " .. m % 60 .. " min"
+end
+
+local function midnight(t)
+    local d = os.date("*t", t)
+    d.hour, d.min, d.sec = 0, 0, 0
+    return os.time(d)
+end
+
+local function week(db, now)
+    local wday = os.date("*t", now).wday
+    if wday ~= 6 then return end
+    local start = midnight(now) - (wday % 7) * 86400
+    local last = start - 7 * 86400
+    local secs = tonumber(db:rowexec("SELECT coalesce(sum(duration), 0) FROM page_stat_data WHERE start_time >= " .. start)) or 0
+    if secs < 60 then return end
+    local pages = tonumber(db:rowexec("SELECT count(*) FROM (SELECT DISTINCT id_book, page FROM page_stat_data "
+        .. "WHERE start_time >= " .. start .. ")")) or 0
+    local before = tonumber(db:rowexec("SELECT coalesce(sum(duration), 0) FROM page_stat_data WHERE start_time >= "
+        .. last .. " AND start_time < " .. start)) or 0
+    local best = db:rowexec("SELECT min(start_time) FROM page_stat_data WHERE start_time >= " .. start
+        .. " GROUP BY date(start_time, 'unixepoch', 'localtime') ORDER BY sum(duration) DESC LIMIT 1")
+    local diff = secs - before
+    local change = math.abs(diff) < 60 and "same as last week"
+        or hm(math.abs(diff)) .. (diff > 0 and " more than last week" or " less than last week")
+    return {
+        id = "dash_week",
+        mood = diff >= 0 and "cheer" or "happy",
+        text = "This week: " .. hm(secs) .. ", " .. pages .. " pages",
+        sub = (best and "Best day " .. os.date("%A", tonumber(best)) .. " · " or "") .. change,
+    }
+end
+
+local function forecast(db, now)
+    local id, title = db:rowexec("SELECT id, title FROM book ORDER BY last_open DESC LIMIT 1")
+    id = tonumber(id)
+    if not id then return end
+    local page, total = db:rowexec("SELECT page, total_pages FROM page_stat_data WHERE id_book = " .. id
+        .. " ORDER BY start_time DESC LIMIT 1")
+    page, total = tonumber(page), tonumber(total)
+    if not (page and total) or total - page <= 0 then return end
+    local read = tonumber(db:rowexec("SELECT count(*) FROM (SELECT DISTINCT page FROM page_stat_data WHERE id_book = "
+        .. id .. " AND start_time >= " .. (now - 7 * 86400) .. ")")) or 0
+    if read == 0 then return end
+    local days = math.ceil((total - page) / (read / 7))
+    local t = now + days * 86400
+    return {
+        id = "dash_forecast",
+        mood = "curious",
+        text = "At this pace, you finish by " .. os.date("%b ", t) .. tonumber(os.date("%d", t)),
+        sub = tostring(title) .. " · " .. math.max(1, math.floor(read / 7 + 0.5)) .. " pages a day",
+    }
+end
+
+local cache, cache_at = {}, 0
+
+-- The lines that fit now; the database is read at most every 5 minutes.
+function Stats.lines()
+    local now = os.time()
+    if now - cache_at < 300 then return cache end
+    cache_at = now
+    local ok, res = pcall(function()
+        local SQ3 = require("lua-ljsqlite3/init")
+        local db = SQ3.open(DataStorage:getSettingsDir() .. "/statistics.sqlite3")
+        local lines = {}
+        for _, fn in ipairs({ week, forecast }) do
+            local ok2, line = pcall(fn, db, now)
+            if ok2 and line then table.insert(lines, line)
+            elseif not ok2 then logger.warn("dashboard: critter line failed", line) end
+        end
+        db:close()
+        return lines
+    end)
+    if not ok then logger.warn("dashboard: reading stats failed", res) end
+    cache = ok and res or {}
+    return cache
+end
+
+return Stats

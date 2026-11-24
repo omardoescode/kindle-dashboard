@@ -210,7 +210,8 @@ function Dashboard:init()
     SUI.tabMark("dash_stopwatch", Home.focusRunning)
     SUI.screenMark("dash_adhkar", Home.adhkarDue)
     SUI.watchBar(Home.focusLabel)
-    Lock.adhkarDue = Home.adhkarDue
+    SUI.critterLines(require("readingstats").lines)
+    Lock.adhkarSet = Home.adhkarSet
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true
         StopwatchWidget.keep_awake(false)
