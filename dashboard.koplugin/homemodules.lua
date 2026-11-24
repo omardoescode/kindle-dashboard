@@ -432,6 +432,7 @@ function Home.schedule()
 end
 
 Home.modules = MODULES
+Home.focusRunning = function() return focus_data().state.started ~= nil end
 Home.bars = {
     { id = "dash_stopwatch", widget_name = "dashboard_stopwatch", active_action_id = "dash_stopwatch", is_pageable = false },
     { id = "dash_adhkar", widget_name = "dashboard_adhkar", is_pageable = false,

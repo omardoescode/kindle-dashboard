@@ -207,6 +207,7 @@ function Dashboard:init()
         { category = "none", event = "DashboardSnip", title = _("Snip area (PDF)"), reader = true })
     -- Each file manager and reader start makes new plugin instances; registering again is harmless.
     SUI.register(Home.modules, Home.actions, Home.bars)
+    SUI.tabDot("dash_stopwatch", Home.focusRunning)
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true
         StopwatchWidget.keep_awake(false)

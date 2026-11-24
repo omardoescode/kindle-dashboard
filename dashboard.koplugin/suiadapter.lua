@@ -40,6 +40,60 @@ function SUI.register(modules, actions, bars)
     end
 end
 
+-- A dot on the top right of the icon of a bottom bar tab while shown() is true.
+local dots = {}
+function SUI.tabDot(action_id, shown)
+    dots[action_id] = shown
+    local Bottombar = load("screens/sui_bottombar")
+    if not Bottombar or Bottombar.dashboard_dots then return end
+    if type(Bottombar.buildTabCell) ~= "function" then
+        logger.warn("dashboard: Simple UI API changed, missing Bottombar.buildTabCell")
+        return
+    end
+    Bottombar.dashboard_dots = true
+    local Blitbuffer = require("ffi/blitbuffer")
+    local Geom = require("ui/geometry")
+    local Widget = require("ui/widget/widget")
+    local Screen = require("device").screen
+    local orig = Bottombar.buildTabCell
+    Bottombar.buildTabCell = function(id, active, tab_w, mode)
+        local cell = orig(id, active, tab_w, mode)
+        local ok, on = pcall(function() return dots[id] and dots[id]() end)
+        if not (ok and on) or type(cell) ~= "table" then return cell end
+        local size = Screen:scaleBySize(9)
+        local icon = (type(Bottombar.ICON_SZ) == "function" and Bottombar.ICON_SZ()) or size * 3
+        local bar_h = (type(Bottombar.BAR_H) == "function" and Bottombar.BAR_H()) or icon * 2
+        local content = cell[1] and cell[1][1]
+        local content_h = content and content.getSize and content:getSize().h or icon
+        local dot = Widget:new{ dimen = Geom:new{ w = size, h = size } }
+        function dot:paintTo(bb, x, y)
+            local r = math.floor(size / 2)
+            bb:paintCircle(x + r, y + r, r, Blitbuffer.COLOR_BLACK)
+        end
+        dot.overlap_offset = {
+            math.min(tab_w - size, math.floor((tab_w + icon) / 2 - size / 2)),
+            math.max(0, math.floor((bar_h - content_h) / 2) - math.floor(size / 3)),
+        }
+        cell[#cell + 1] = dot
+        return cell
+    end
+end
+
+-- Builds again the bottom bars of the shown screens, so their dots follow a change. The caller repaints.
+function SUI.rebuildBars()
+    local Bottombar = package.loaded["screens/sui_bottombar"]
+    if not (Bottombar and Bottombar.dashboard_dots) then return end
+    local UIManager = require("ui/uimanager")
+    for _, win in ipairs(UIManager._window_stack or {}) do
+        local w = win.widget
+        local state = w and w._navbar_bar and w._navbar_bar._tab_state
+        if state and w._navbar_tabs then
+            call("Bottombar.replaceBar", Bottombar.replaceBar, w,
+                Bottombar.buildBarWidget(state.active, w._navbar_tabs), w._navbar_tabs)
+        end
+    end
+end
+
 -- Simple UI keeps the tab of the screen below active; the adhkar screen opened from a menu belongs to no tab.
 function SUI.clearActiveTab(widget)
     local Bottombar = load("screens/sui_bottombar")
