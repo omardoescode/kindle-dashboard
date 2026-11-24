@@ -49,16 +49,22 @@ local function forecast(db, now)
         .. " ORDER BY start_time DESC LIMIT 1")
     page, total = tonumber(page), tonumber(total)
     if not (page and total) or total - page <= 0 then return end
+    local since = now - 7 * 86400
     local read = tonumber(db:rowexec("SELECT count(*) FROM (SELECT DISTINCT page FROM page_stat_data WHERE id_book = "
-        .. id .. " AND start_time >= " .. (now - 7 * 86400) .. ")")) or 0
+        .. id .. " AND start_time >= " .. since .. ")")) or 0
     if read == 0 then return end
-    local days = math.ceil((total - page) / (read / 7))
+    -- A book started less than 7 days ago is read over fewer days.
+    local first = tonumber(db:rowexec("SELECT min(start_time) FROM page_stat_data WHERE id_book = " .. id
+        .. " AND start_time >= " .. since))
+    local span = math.min(7, math.floor((midnight(now) - midnight(first)) / 86400 + 0.5) + 1)
+    local pace = read / span
+    local days = math.ceil((total - page) / pace)
     local t = now + days * 86400
     return {
         id = "dash_forecast",
         mood = "curious",
         text = "At this pace, you finish by " .. os.date("%b ", t) .. tonumber(os.date("%d", t)),
-        sub = tostring(title) .. " · " .. math.max(1, math.floor(read / 7 + 0.5)) .. " pages a day",
+        sub = tostring(title) .. " · " .. math.max(1, math.floor(pace + 0.5)) .. " pages a day",
     }
 end
 
