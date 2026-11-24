@@ -53,8 +53,12 @@ local function finishedToday()
     end
 end
 
+local last_streak = 0
+function Lock.streak() return last_streak end
+
 function Lock.state()
     local secs, streak = stats()
+    last_streak = streak
     local mins = math.floor(secs / 60)
     local goal = G_reader_settings:readSetting("dashboard_daily_goal_minutes") or 30
     local done = finishedToday()
@@ -67,8 +71,13 @@ function Lock.state()
     return "happy", mins .. " min today · " .. (goal - mins) .. " min to your goal"
 end
 
+-- A tasbih in the critter's pixels, hung next to it while adhkar are due.
+local TASBIH = { ".X.X.X.", "X.....X", ".......", "X.....X", ".......", "X.....X", ".X.X.X.",
+    "...X...", "..XXX..", "...X...", "..X.X.." }
+local TASBIH_TOP = 7
+
 -- The critter pixels as squares of side "scale": its images are a few dozen pixels.
-local function paintCritter(bb, mood, cx, top, width)
+local function paintCritter(bb, mood, cx, top, width, tasbih)
     local path = DataStorage:getSettingsDir() .. "/simpleui/sui_critters/anqa/" .. mood .. ".png"
     local img = RenderImage:renderImageFile(path, false)
     if not img then return 0 end
@@ -78,7 +87,15 @@ local function paintCritter(bb, mood, cx, top, width)
     flat:alphablitFrom(img, 0, 0, 0, 0, w, h)
     img:free()
     local s = math.floor(width / w)
-    local x0 = cx - math.floor(w * s / 2)
+    local tw = tasbih and #TASBIH[1] or 0
+    local x0 = cx - math.floor((w + tw) * s / 2)
+    for ty, row in ipairs(TASBIH) do
+        for tx = 1, tw do
+            if row:sub(tx, tx) == "X" then
+                bb:paintRect(x0 + (w + tx - 1) * s, top + (TASBIH_TOP + ty - 1) * s, s, s, Blitbuffer.COLOR_BLACK)
+            end
+        end
+    end
     for y = 0, h - 1 do
         for x = 0, w - 1 do
             local c = flat:getPixel(x, y)
@@ -106,7 +123,8 @@ local REFRESH = 120
 local function refresh()
     local ok, mood, line = pcall(Lock.state)
     if ok then
-        cached = { mood = mood, line = line }
+        local due = Lock.adhkarDue and select(2, pcall(Lock.adhkarDue))
+        cached = { mood = mood, line = line, tasbih = due == true }
     else
         logger.warn("dashboard: lock state failed", mood)
     end
@@ -122,10 +140,13 @@ function Lock.render()
     -- Sized by the short side, so it fits in landscape too.
     local cw = math.floor(math.min(w, h) * 0.6)
     local top = math.floor((h - cw * 0.73) / 2) - Screen:scaleBySize(30)
-    local ch = paintCritter(bb, mood, cx, top, cw)
+    local ch = paintCritter(bb, mood, cx, top, cw, cached.tasbih)
     local y = top + ch + Screen:scaleBySize(40)
     -- Geist Pixel, like the critter's bubble in Simple UI; Simple UI ships it and adds it to the font list.
-    paintText(bb, line, Font:getFace("GeistPixel-Regular.ttf", 26) or Font:getFace("cfont", 26), cx, y)
+    -- Its pixels are 1/13 of its size: other sizes blur them to gray.
+    local unit = Screen:scaleBySize(1000) / 1000
+    local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
+    paintText(bb, line, Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26), cx, y)
     return bb
 end
 

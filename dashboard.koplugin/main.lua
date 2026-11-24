@@ -207,11 +207,27 @@ function Dashboard:init()
         { category = "none", event = "DashboardSnip", title = _("Snip area (PDF)"), reader = true })
     -- Each file manager and reader start makes new plugin instances; registering again is harmless.
     SUI.register(Home.modules, Home.actions, Home.bars)
-    SUI.tabDot("dash_stopwatch", Home.focusRunning)
-    SUI.tabDot("dash_adhkar_open", Home.adhkarDue)
+    SUI.tabMark("dash_stopwatch", Home.focusRunning)
+    SUI.screenMark("dash_adhkar", Home.adhkarDue)
+    SUI.tabMark("home", function()
+        local n = Lock.streak()
+        return n > 0 and tostring(n) or nil
+    end)
+    SUI.watchBar(Home.focusLabel)
+    Lock.adhkarDue = Home.adhkarDue
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true
         StopwatchWidget.keep_awake(false)
+        -- The tab marks change with the time (focus time, adhkar, streak), on every screen with a bar.
+        local UIManager = require("ui/uimanager")
+        local function bars()
+            if not Device.screen_saver_mode then
+                local ok, err = pcall(SUI.syncBars, true)
+                if not ok then require("logger").warn("dashboard: bar marks failed", err) end
+            end
+            UIManager:scheduleIn(60 - os.time() % 60 + 2, bars)
+        end
+        UIManager:scheduleIn(10, bars)
         -- An older koreader.sh that ends after we start deletes our /var/tmp copy of it, and the next
         -- KOReader restart then shows "startup script has been updated". Put the copy back.
         if Device:isKindle() then

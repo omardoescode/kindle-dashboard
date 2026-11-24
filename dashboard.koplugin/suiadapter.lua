@@ -40,49 +40,121 @@ function SUI.register(modules, actions, bars)
     end
 end
 
--- A dot on the top right of the icon of a bottom bar tab while shown() is true.
-local dots = {}
-function SUI.tabDot(action_id, shown)
-    dots[action_id] = shown
-    local Bottombar = load("screens/sui_bottombar")
-    if not Bottombar or Bottombar.dashboard_dots then return end
-    if type(Bottombar.buildTabCell) ~= "function" then
-        logger.warn("dashboard: Simple UI API changed, missing Bottombar.buildTabCell")
-        return
+-- A mark on the top right of the icon of a bottom bar tab: mark() returns true for a dot,
+-- a string for a small badge with that text, or nothing.
+local marks, mark_ids, screen_marks = {}, {}, {}
+
+local function value(fn)
+    local ok, v = pcall(fn)
+    if ok and (v == true or (type(v) == "string" and v ~= "")) then return v end
+end
+
+-- The tab of a custom Simple UI screen gets the mark of a module on that screen.
+local function screenHas(cs_id, module_id)
+    local Store = package.loaded["infra/sui_store"]
+    local layout = Store and Store.get and Store:get("simpleui_layout_cs_" .. cs_id)
+    for _, page in ipairs(type(layout) == "table" and layout.pages or {}) do
+        for _, m in ipairs(page.modules or {}) do
+            if m == module_id then return true end
+        end
     end
-    Bottombar.dashboard_dots = true
+end
+
+local function markOf(id)
+    if marks[id] then return value(marks[id]) end
+    local cs_id = type(id) == "string" and id:match("^open_custom_screen:(.+)$")
+    if not cs_id then return end
+    for module_id, fn in pairs(screen_marks) do
+        if screenHas(cs_id, module_id) then
+            local v = value(fn)
+            if v then return v end
+        end
+    end
+end
+
+local function markWidget(v, size)
     local Blitbuffer = require("ffi/blitbuffer")
     local Geom = require("ui/geometry")
-    local Widget = require("ui/widget/widget")
-    local Screen = require("device").screen
-    local orig = Bottombar.buildTabCell
-    Bottombar.buildTabCell = function(id, active, tab_w, mode)
-        local cell = orig(id, active, tab_w, mode)
-        local ok, on = pcall(function() return dots[id] and dots[id]() end)
-        if not (ok and on) or type(cell) ~= "table" then return cell end
-        local size = Screen:scaleBySize(9)
-        local icon = (type(Bottombar.ICON_SZ) == "function" and Bottombar.ICON_SZ()) or size * 3
-        local bar_h = (type(Bottombar.BAR_H) == "function" and Bottombar.BAR_H()) or icon * 2
-        local content = cell[1] and cell[1][1]
-        local content_h = content and content.getSize and content:getSize().h or icon
-        local dot = Widget:new{ dimen = Geom:new{ w = size, h = size } }
+    if v == true then
+        local dot = require("ui/widget/widget"):new{ dimen = Geom:new{ w = size, h = size } }
         function dot:paintTo(bb, x, y)
             local r = math.floor(size / 2)
             bb:paintCircle(x + r, y + r, r, Blitbuffer.COLOR_BLACK)
         end
-        dot.overlap_offset = {
-            math.min(tab_w - size, math.floor((tab_w + icon) / 2 - size / 2)),
-            math.max(0, math.floor((bar_h - content_h) / 2) - math.floor(size / 3)),
+        return dot
+    end
+    local Screen = require("device").screen
+    return require("ui/widget/container/framecontainer"):new{
+        bordersize = 0, margin = 0, background = Blitbuffer.COLOR_BLACK, radius = Screen:scaleBySize(7),
+        padding = 0, padding_left = Screen:scaleBySize(4), padding_right = Screen:scaleBySize(4),
+        require("ui/widget/textwidget"):new{
+            text = v, face = require("ui/font"):getFace("cfont", 11), bold = true, fgcolor = Blitbuffer.COLOR_WHITE,
+            padding = 0,
+        },
+    }
+end
+
+local install
+function SUI.tabMark(action_id, mark)
+    if not marks[action_id] then table.insert(mark_ids, action_id) end
+    marks[action_id] = mark
+    install()
+end
+
+function SUI.screenMark(module_id, mark)
+    screen_marks[module_id] = mark
+    install()
+end
+
+install = function()
+    local Bottombar = load("screens/sui_bottombar")
+    if not Bottombar or Bottombar.dashboard_marks then return end
+    if type(Bottombar.buildTabCell) ~= "function" then
+        logger.warn("dashboard: Simple UI API changed, missing Bottombar.buildTabCell")
+        return
+    end
+    Bottombar.dashboard_marks = true
+    local Screen = require("device").screen
+    local orig = Bottombar.buildTabCell
+    Bottombar.buildTabCell = function(id, active, tab_w, mode)
+        local cell = orig(id, active, tab_w, mode)
+        local v = markOf(id)
+        if not v or type(cell) ~= "table" then return cell end
+        local ok, widget = pcall(markWidget, v, Screen:scaleBySize(9))
+        if not ok then
+            logger.warn("dashboard: tab mark failed", widget)
+            return cell
+        end
+        local size = widget:getSize()
+        local icon = (type(Bottombar.ICON_SZ) == "function" and Bottombar.ICON_SZ()) or size.h * 3
+        local bar_h = (type(Bottombar.BAR_H) == "function" and Bottombar.BAR_H()) or icon * 2
+        local content = cell[1] and cell[1][1]
+        local content_h = content and content.getSize and content:getSize().h or icon
+        widget.overlap_offset = {
+            math.min(tab_w - size.w, math.floor((tab_w + icon) / 2 - size.h / 2)),
+            math.max(0, math.floor((bar_h - content_h) / 2) - math.floor(size.h / 3)),
         }
-        cell[#cell + 1] = dot
+        cell[#cell + 1] = widget
         return cell
     end
 end
 
--- Builds again the bottom bars of the shown screens, so their dots follow a change.
-function SUI.rebuildBars(repaint)
+-- What the bar shows besides the marks, such as a label that changes; checked by syncBars.
+local watched = {}
+function SUI.watchBar(fn) table.insert(watched, fn) end
+
+-- Builds again the bottom bars of the shown screens when a mark or a watched value changed.
+local last_key
+function SUI.syncBars(repaint)
     local Bottombar = package.loaded["screens/sui_bottombar"]
-    if not (Bottombar and Bottombar.dashboard_dots) then return end
+    if not (Bottombar and Bottombar.dashboard_marks) then return end
+    local key = {}
+    for _, id in ipairs(mark_ids) do table.insert(key, tostring((markOf(id)))) end
+    for module_id, fn in pairs(screen_marks) do table.insert(key, module_id .. tostring((value(fn)))) end
+    for _, fn in ipairs(watched) do table.insert(key, tostring((select(2, pcall(fn))))) end
+    key = table.concat(key, "|")
+    if key == last_key then return end
+    last_key = key
     local UIManager = require("ui/uimanager")
     for _, win in ipairs(UIManager._window_stack or {}) do
         local w = win.widget
@@ -90,7 +162,9 @@ function SUI.rebuildBars(repaint)
         if state and w._navbar_tabs then
             call("Bottombar.replaceBar", Bottombar.replaceBar, w,
                 Bottombar.buildBarWidget(state.active, w._navbar_tabs), w._navbar_tabs)
-            if repaint then call("Bottombar.repaintBar", Bottombar.repaintBar, w) end
+            if repaint and UIManager:getTopmostVisibleWidget() == w then
+                call("Bottombar.repaintBar", Bottombar.repaintBar, w)
+            end
         end
     end
 end

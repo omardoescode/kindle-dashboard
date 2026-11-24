@@ -416,9 +416,7 @@ update = function()
         end
     end
     if relayout then SUI.refresh(Home.refresh) end
-    local dots = tostring(Home.focusRunning()) .. tostring(Home.adhkarDue())
-    if live.dots and live.dots ~= dots then SUI.rebuildBars(true) end
-    live.dots = dots
+    SUI.syncBars(true)
 end
 
 local function tick()
@@ -437,13 +435,20 @@ end
 Home.modules = MODULES
 Home.focusRunning = function() return focus_data().state.started ~= nil end
 Home.adhkarDue = function() return MODULES[4].due(os.time()) ~= nil end
+Home.focusLabel = function()
+    local s = focus_data().state
+    if not s.started then return "Focus" end
+    local m = math.floor(FocusStore.elapsed(s, os.time()) / 60)
+    return string.format("%d:%02d", math.floor(m / 60), m % 60)
+end
 Home.bars = {
     { id = "dash_stopwatch", widget_name = "dashboard_stopwatch", active_action_id = "dash_stopwatch", is_pageable = false },
     { id = "dash_adhkar", widget_name = "dashboard_adhkar", is_pageable = false,
         on_inject = function(widget) SUI.clearActiveTab(widget) end },
 }
 Home.actions = {
-    { id = "dash_stopwatch", label = "Focus", icon = "nerd:F252", execute = function() Home.openStopwatch() end },
+    { id = "dash_stopwatch", label = "Focus", icon = "nerd:F252", execute = function() Home.openStopwatch() end,
+        get_label = function() return Home.focusLabel() end },
     { id = "dash_adhkar_open", label = "Adhkar", icon = "nerd:F186",
         execute = function() Home.openAdhkar(MODULES[4].due(os.time())) end },
     -- KinAMP's own show/hide event. A broadcast reaches its plugin under the Simple UI screens too.

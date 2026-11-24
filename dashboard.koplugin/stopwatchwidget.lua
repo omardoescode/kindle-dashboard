@@ -231,10 +231,7 @@ end
 
 function StopwatchWidget:refresh(full)
     self:build()
-    if self.dotted ~= (self.data.state.started ~= nil) then
-        self.dotted = self.data.state.started ~= nil
-        SUI.rebuildBars()
-    end
+    SUI.syncBars()
     UIManager:setDirty(self, full and "full" or "ui")
 end
 
