@@ -169,8 +169,8 @@ function SUI.syncBars(repaint)
     end
 end
 
--- Our lines for Simple UI's Home critter: lines() returns { id, text, sub, mood } tables. Each line is said
--- the first time it fits on a day; after that it comes up now and then among Simple UI's own phrases.
+-- Our lines for Simple UI's Home critter: lines() returns { id, text, sub, mood } tables. They come up now
+-- and then among Simple UI's own phrases.
 function SUI.critterLines(lines)
     local Phrases = load("modules/critter/phrases")
     if not Phrases or Phrases.dashboard_lines then return end
@@ -179,20 +179,14 @@ function SUI.critterLines(lines)
         return
     end
     Phrases.dashboard_lines = true
-    local said = {}
     local orig = Phrases.pick
     Phrases.pick = function(f, opts, celebrate)
         local phrase = orig(f, opts, celebrate)
         if celebrate and phrase then return phrase end
         local ok, list = pcall(lines)
         if not ok or type(list) ~= "table" or #list == 0 then return phrase end
-        local today, line = os.date("%Y-%m-%d")
-        for _, l in ipairs(list) do
-            if said[l.id] ~= today then line = l break end
-        end
-        if not line and phrase and math.random(4) > 1 then return phrase end
-        line = line or list[math.random(#list)]
-        said[line.id] = today
+        if phrase and math.random(4) > 1 then return phrase end
+        local line = list[math.random(#list)]
         local source = { id = line.id, cat = "dashboard", mood = line.mood }
         source.when = function()
             local ok2, now = pcall(lines)
