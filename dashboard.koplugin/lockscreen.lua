@@ -196,19 +196,32 @@ function Lock.render()
     local bb = Blitbuffer.new(w, h, Screen.bb:getType())
     bb:fill(Blitbuffer.COLOR_WHITE)
     local cx = math.floor(w / 2)
-    -- Sized by the short side, so it fits in landscape too.
-    local cw = math.floor(math.min(w, h) * 0.6)
-    local top = math.floor((h - cw * 0.73) / 2) - Screen:scaleBySize(30)
-    local ch = paintCritter(bb, mood, cx, top, cw, cached.accessories)
-    local y = top + ch + Screen:scaleBySize(40)
     -- Geist Pixel, like the critter's bubble in Simple UI; Simple UI ships it and adds it to the font list.
     -- Its pixels are 1/13 of its size: other sizes blur them to gray.
     local unit = Screen:scaleBySize(1000) / 1000
     local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
+    local azkar = cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"
+    local gap, pad = Screen:scaleBySize(40), Screen:scaleBySize(6)
+    local probe = TextWidget:new{ text = "Xg", face = face }
+    local line_h = probe:getSize().h
+    probe:free()
+    local text_h = line_h + (azkar and Screen:scaleBySize(16) + line_h + 2 * pad or 0)
+    -- The whole group is centred above "Swipe up to read"; the critter shrinks when the screen is short.
+    local bottom = h - Screen:scaleBySize(90)
+    local crown = 0
+    for _, name in ipairs(cached.accessories or {}) do
+        if name == "crown" then crown = 0.2 end
+    end
+    local cw = math.floor(math.min(math.min(w, h) * 0.6,
+        (bottom - Screen:scaleBySize(40) - gap - text_h) / (0.73 + crown)))
+    local group_h = cw * (0.73 + crown) + gap + text_h
+    local top = math.floor((bottom - group_h) / 2 + cw * crown)
+    local ch = paintCritter(bb, mood, cx, top, cw, cached.accessories)
+    local y = top + ch + gap
     y = y + paintText(bb, line, face, cx, y)
-    if cached.adhkar then
-        paintText(bb, "Don't forget your " .. cached.adhkar .. " azkar", face, cx, y + Screen:scaleBySize(16), Screen:scaleBySize(6))
+    if azkar then
+        paintText(bb, azkar, face, cx, y + Screen:scaleBySize(16), pad)
     end
     return bb
 end
