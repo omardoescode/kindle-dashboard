@@ -170,15 +170,16 @@ local function paintText(bb, text, face, cx, y)
 end
 
 -- A pixel speech bubble like Simple UI's, its tail pointing up at the critter. Returns its height.
-local function paintBubble(bb, text, face, cx, y, u, pad)
-    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(80) }
+local function paintBubble(bb, text, face, cx, y, u, pad, dark)
+    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(80),
+        fgcolor = dark and Blitbuffer.COLOR_WHITE or nil }
     local size = tw:getSize()
     local tail = 4
     local bw, bh = size.w + 2 * pad + 2 * u, size.h + 2 * pad + 2 * u
     local x, top = cx - math.floor(bw / 2), y + tail * u
     local BLACK, WHITE = Blitbuffer.COLOR_BLACK, Blitbuffer.COLOR_WHITE
     bb:paintRect(x, top, bw, bh, BLACK)
-    bb:paintRect(x + u, top + u, bw - 2 * u, bh - 2 * u, WHITE)
+    bb:paintRect(x + u, top + u, bw - 2 * u, bh - 2 * u, dark and BLACK or WHITE)
     for _, c in ipairs({ { x, top }, { x + bw - u, top }, { x, top + bh - u }, { x + bw - u, top + bh - u } }) do
         bb:paintRect(c[1], c[2], u, u, WHITE)
     end
@@ -189,7 +190,7 @@ local function paintBubble(bb, text, face, cx, y, u, pad)
     local tx = cx - math.floor(u / 2)
     for k = 0, tail do
         bb:paintRect(tx - k * u, y + k * u, (2 * k + 1) * u, u, BLACK)
-        if k > 0 then bb:paintRect(tx - (k - 1) * u, y + k * u, (2 * k - 1) * u, u, WHITE) end
+        if k > 0 and not dark then bb:paintRect(tx - (k - 1) * u, y + k * u, (2 * k - 1) * u, u, WHITE) end
     end
     tw:paintTo(bb, x + u + pad, top + u + pad)
     tw:free()
@@ -230,7 +231,8 @@ function Lock.render()
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
     local cap = require("lowbattery")()
     local azkar = cap and "Charge me · " .. cap .. "%"
-        or cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
+        or cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"
+    local dark = not cap and azkar ~= nil    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
     local probe = TextWidget:new{ text = "Xg", face = face }
     local line_h = probe:getSize().h
     probe:free()
@@ -247,7 +249,7 @@ function Lock.render()
     local top = math.floor((bottom - group_h) / 2 + cw * crown)
     local ch = paintCritter(bb, mood, cx, top, cw, cached.accessories)
     local y = top + ch + Screen:scaleBySize(16)
-    if azkar then y = y + paintBubble(bb, azkar, face, cx, y, u, pad) end
+    if azkar then y = y + paintBubble(bb, azkar, face, cx, y, u, pad, dark) end
     paintText(bb, line, face, cx, y + (azkar and Screen:scaleBySize(16) or gap - Screen:scaleBySize(16)))
     return bb
 end
