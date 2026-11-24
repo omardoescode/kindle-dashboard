@@ -67,32 +67,8 @@ function Lock.state()
     return "happy", mins .. " min today · " .. (goal - mins) .. " min to your goal"
 end
 
--- A tasbih in the critter's pixels, hung next to it while adhkar are due: X black, G gray.
--- Drawn after "Tasbih Vector Icon" by Vecteezy.com.
-local TASBIH = {
-    "......X.......",
-    "......XGG.....",
-    "......XX......",
-    "......GG......",
-    "......XX......",
-    "...XX.XX.XX...",
-    "...XX....XX...",
-    ".XX........XX.",
-    ".XX........XX.",
-    "..............",
-    "XX..........XX",
-    "XX..........XX",
-    "..............",
-    ".XX........XX.",
-    ".XX........XX.",
-    "...XX....XX...",
-    "...XX.XX.XX...",
-    "......XX......",
-}
-local TASBIH_TOP = 19 - #TASBIH
-
 -- The critter pixels as squares of side "scale": its images are a few dozen pixels.
-local function paintCritter(bb, mood, cx, top, width, tasbih)
+local function paintCritter(bb, mood, cx, top, width)
     local path = DataStorage:getSettingsDir() .. "/simpleui/sui_critters/anqa/" .. mood .. ".png"
     local img = RenderImage:renderImageFile(path, false)
     if not img then return 0 end
@@ -102,17 +78,7 @@ local function paintCritter(bb, mood, cx, top, width, tasbih)
     flat:alphablitFrom(img, 0, 0, 0, 0, w, h)
     img:free()
     local s = math.floor(width / w)
-    local tw = tasbih and #TASBIH[1] or 0
-    local x0 = cx - math.floor((w + tw) * s / 2)
-    for ty, row in ipairs(TASBIH) do
-        for tx = 1, tw do
-            local ch = row:sub(tx, tx)
-            if ch ~= "." then
-                bb:paintRect(x0 + (w + tx - 1) * s, top + (TASBIH_TOP + ty - 1) * s, s, s,
-                    ch == "X" and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_GRAY)
-            end
-        end
-    end
+    local x0 = cx - math.floor(w * s / 2)
     for y = 0, h - 1 do
         for x = 0, w - 1 do
             local c = flat:getPixel(x, y)
@@ -141,7 +107,7 @@ local function refresh()
     local ok, mood, line = pcall(Lock.state)
     if ok then
         local due = Lock.adhkarDue and select(2, pcall(Lock.adhkarDue))
-        cached = { mood = mood, line = line, tasbih = due == true }
+        cached = { mood = mood, line = line, adhkar = due == true }
     else
         logger.warn("dashboard: lock state failed", mood)
     end
@@ -157,13 +123,15 @@ function Lock.render()
     -- Sized by the short side, so it fits in landscape too.
     local cw = math.floor(math.min(w, h) * 0.6)
     local top = math.floor((h - cw * 0.73) / 2) - Screen:scaleBySize(30)
-    local ch = paintCritter(bb, mood, cx, top, cw, cached.tasbih)
+    local ch = paintCritter(bb, mood, cx, top, cw)
     local y = top + ch + Screen:scaleBySize(40)
     -- Geist Pixel, like the critter's bubble in Simple UI; Simple UI ships it and adds it to the font list.
     -- Its pixels are 1/13 of its size: other sizes blur them to gray.
     local unit = Screen:scaleBySize(1000) / 1000
     local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
-    paintText(bb, line, Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26), cx, y)
+    local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
+    y = y + paintText(bb, line, face, cx, y)
+    if cached.adhkar then paintText(bb, "Don't forget your azkar", face, cx, y + Screen:scaleBySize(12)) end
     return bb
 end
 
