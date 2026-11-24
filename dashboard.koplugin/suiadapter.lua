@@ -185,8 +185,12 @@ function SUI.critterLines(lines)
         if celebrate and phrase then return phrase end
         local ok, list = pcall(lines)
         if not ok or type(list) ~= "table" or #list == 0 then return phrase end
-        if phrase and math.random(4) > 1 then return phrase end
-        local line = list[math.random(#list)]
+        local line
+        for _, l in ipairs(list) do
+            if l.urgent then line = l end
+        end
+        if not line and phrase and math.random(4) > 1 then return phrase end
+        line = line or list[math.random(#list)]
         local source = { id = line.id, cat = "dashboard", mood = line.mood }
         source.when = function()
             local ok2, now = pcall(lines)
@@ -198,6 +202,36 @@ function SUI.critterLines(lines)
         source.text = function() return line.text end
         source.sub = function() return line.sub end
         return { text = line.text, sub = line.sub, mood = line.mood, source = source }
+    end
+end
+
+-- Simple UI's top bar turns black (inverted) while low() is true.
+function SUI.topbarAlarm(low)
+    local Topbar = load("screens/sui_topbar")
+    if not Topbar or Topbar.dashboard_alarm then return end
+    if type(Topbar.buildTopbarWidget) ~= "function" then
+        logger.warn("dashboard: Simple UI API changed, missing Topbar.buildTopbarWidget")
+        return
+    end
+    Topbar.dashboard_alarm = true
+    local UIManager = require("ui/uimanager")
+    local orig = Topbar.buildTopbarWidget
+    Topbar.buildTopbarWidget = function(...)
+        local root = orig(...)
+        local orig_paint = root.paintTo
+        local was
+        root.paintTo = function(self, bb, x, y)
+            orig_paint(self, bb, x, y)
+            local on = low() ~= nil
+            local h = self.dimen and self.dimen.h
+            if on and h then bb:invertRect(0, y, bb:getWidth(), h) end
+            -- Only the changed labels get refreshed; the rest of the bar must follow its new color.
+            if was ~= nil and was ~= on and h then
+                UIManager:nextTick(function() UIManager:setDirty(nil, "ui", require("ui/geometry"):new{ x = 0, y = y, w = bb:getWidth(), h = h }) end)
+            end
+            was = on
+        end
+        return root
     end
 end
 

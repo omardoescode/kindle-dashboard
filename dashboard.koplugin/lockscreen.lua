@@ -228,7 +228,9 @@ function Lock.render()
     local unit = Screen:scaleBySize(1000) / 1000
     local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
-    local azkar = cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
+    local cap = require("lowbattery")()
+    local azkar = cap and "Charge me · " .. cap .. "%"
+        or cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
     local probe = TextWidget:new{ text = "Xg", face = face }
     local line_h = probe:getSize().h
     probe:free()

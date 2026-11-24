@@ -215,6 +215,7 @@ function Dashboard:init()
     local Stats = require("readingstats")
     Stats.bedtime = Home.cfg().bedtime
     SUI.critterLines(Stats.lines)
+    SUI.topbarAlarm(require("lowbattery"))
     Lock.adhkarSet = Home.adhkarSet
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true
@@ -229,6 +230,17 @@ function Dashboard:init()
             UIManager:scheduleIn(60 - os.time() % 60 + 2, bars)
         end
         UIManager:scheduleIn(10, bars)
+        -- A KOReader started while the Kindle is in its sleep state gets no goingToScreenSaver event, so it
+        -- shows Home until the Kindle suspends with it on the screen, and the screen seems frozen.
+        if Device:isKindle() and Device.powerd and Device.powerd.getPowerdState then
+            UIManager:scheduleIn(2, function()
+                local ok, state = pcall(Device.powerd.getPowerdState, Device.powerd)
+                if ok and state == "screenSaver" and not Device.screen_saver_mode then
+                    require("logger").info("dashboard: started during sleep, showing the lock screen")
+                    Device:intoScreenSaver(2)
+                end
+            end)
+        end
         -- An older koreader.sh that ends after we start deletes our /var/tmp copy of it, and the next
         -- KOReader restart then shows "startup script has been updated". Put the copy back.
         if Device:isKindle() then

@@ -86,10 +86,23 @@ end
 
 local cache, cache_at = {}, 0
 
+-- Checked at every pick, not cached: it says what to do now.
+local low = require("lowbattery")
+local function withBattery(lines)
+    local cap = low()
+    if not cap then return lines end
+    local out = { {
+        id = "dash_battery", mood = "sleepy", urgent = true,
+        text = "Charge me", sub = "Battery at " .. cap .. "%",
+    } }
+    for _, l in ipairs(lines) do out[#out + 1] = l end
+    return out
+end
+
 -- The lines that fit now; the database is read at most every 5 minutes.
 function Stats.lines()
     local now = os.time()
-    if now - cache_at < 300 then return cache end
+    if now - cache_at < 300 then return withBattery(cache) end
     cache_at = now
     local ok, res = pcall(function()
         local SQ3 = require("lua-ljsqlite3/init")
@@ -105,7 +118,7 @@ function Stats.lines()
     end)
     if not ok then logger.warn("dashboard: reading stats failed", res) end
     cache = ok and res or {}
-    return cache
+    return withBattery(cache)
 end
 
 return Stats
