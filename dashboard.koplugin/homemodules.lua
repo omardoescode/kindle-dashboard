@@ -416,6 +416,9 @@ update = function()
         end
     end
     if relayout then SUI.refresh(Home.refresh) end
+    local dots = tostring(Home.focusRunning()) .. tostring(Home.adhkarDue())
+    if live.dots and live.dots ~= dots then SUI.rebuildBars(true) end
+    live.dots = dots
 end
 
 local function tick()
@@ -433,6 +436,7 @@ end
 
 Home.modules = MODULES
 Home.focusRunning = function() return focus_data().state.started ~= nil end
+Home.adhkarDue = function() return MODULES[4].due(os.time()) ~= nil end
 Home.bars = {
     { id = "dash_stopwatch", widget_name = "dashboard_stopwatch", active_action_id = "dash_stopwatch", is_pageable = false },
     { id = "dash_adhkar", widget_name = "dashboard_adhkar", is_pageable = false,

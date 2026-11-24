@@ -79,8 +79,8 @@ function SUI.tabDot(action_id, shown)
     end
 end
 
--- Builds again the bottom bars of the shown screens, so their dots follow a change. The caller repaints.
-function SUI.rebuildBars()
+-- Builds again the bottom bars of the shown screens, so their dots follow a change.
+function SUI.rebuildBars(repaint)
     local Bottombar = package.loaded["screens/sui_bottombar"]
     if not (Bottombar and Bottombar.dashboard_dots) then return end
     local UIManager = require("ui/uimanager")
@@ -90,6 +90,7 @@ function SUI.rebuildBars()
         if state and w._navbar_tabs then
             call("Bottombar.replaceBar", Bottombar.replaceBar, w,
                 Bottombar.buildBarWidget(state.active, w._navbar_tabs), w._navbar_tabs)
+            if repaint then call("Bottombar.repaintBar", Bottombar.repaintBar, w) end
         end
     end
 end

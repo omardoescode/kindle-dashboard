@@ -208,6 +208,7 @@ function Dashboard:init()
     -- Each file manager and reader start makes new plugin instances; registering again is harmless.
     SUI.register(Home.modules, Home.actions, Home.bars)
     SUI.tabDot("dash_stopwatch", Home.focusRunning)
+    SUI.tabDot("dash_adhkar_open", Home.adhkarDue)
     if not PluginShare.dashboard_started then
         PluginShare.dashboard_started = true
         StopwatchWidget.keep_awake(false)
