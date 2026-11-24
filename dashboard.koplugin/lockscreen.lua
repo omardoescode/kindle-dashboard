@@ -67,10 +67,29 @@ function Lock.state()
     return "happy", mins .. " min today · " .. (goal - mins) .. " min to your goal"
 end
 
--- A tasbih in the critter's pixels, hung next to it while adhkar are due.
-local TASBIH = { ".X.X.X.", "X.....X", ".......", "X.....X", ".......", "X.....X", ".X.X.X.",
-    "...X...", "..XXX..", "...X...", "..X.X.." }
-local TASBIH_TOP = 7
+-- A tasbih in the critter's pixels, hung next to it while adhkar are due: X black, G gray.
+-- Drawn after "Tasbih Vector Icon" by Vecteezy.com.
+local TASBIH = {
+    "......X.......",
+    "......XGG.....",
+    "......XX......",
+    "......GG......",
+    "......XX......",
+    "...XX.XX.XX...",
+    "...XX....XX...",
+    ".XX........XX.",
+    ".XX........XX.",
+    "..............",
+    "XX..........XX",
+    "XX..........XX",
+    "..............",
+    ".XX........XX.",
+    ".XX........XX.",
+    "...XX....XX...",
+    "...XX.XX.XX...",
+    "......XX......",
+}
+local TASBIH_TOP = 19 - #TASBIH
 
 -- The critter pixels as squares of side "scale": its images are a few dozen pixels.
 local function paintCritter(bb, mood, cx, top, width, tasbih)
@@ -87,8 +106,10 @@ local function paintCritter(bb, mood, cx, top, width, tasbih)
     local x0 = cx - math.floor((w + tw) * s / 2)
     for ty, row in ipairs(TASBIH) do
         for tx = 1, tw do
-            if row:sub(tx, tx) == "X" then
-                bb:paintRect(x0 + (w + tx - 1) * s, top + (TASBIH_TOP + ty - 1) * s, s, s, Blitbuffer.COLOR_BLACK)
+            local ch = row:sub(tx, tx)
+            if ch ~= "." then
+                bb:paintRect(x0 + (w + tx - 1) * s, top + (TASBIH_TOP + ty - 1) * s, s, s,
+                    ch == "X" and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_GRAY)
             end
         end
     end
