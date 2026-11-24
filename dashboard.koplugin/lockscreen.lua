@@ -124,8 +124,8 @@ function Lock.render()
     local top = math.floor((h - cw * 0.73) / 2) - Screen:scaleBySize(30)
     local ch = paintCritter(bb, mood, cx, top, cw)
     local y = top + ch + Screen:scaleBySize(40)
-    -- Bookerly, the Kindle's own font, like Simple UI's Home; it ships with the Kindle, not with us.
-    paintText(bb, line, Font:getFace("Bookerly-Regular.ttf", 26) or Font:getFace("cfont", 26), cx, y)
+    -- Geist Pixel, like the critter's bubble in Simple UI; Simple UI ships it and adds it to the font list.
+    paintText(bb, line, Font:getFace("GeistPixel-Regular.ttf", 26) or Font:getFace("cfont", 26), cx, y)
     return bb
 end
 
