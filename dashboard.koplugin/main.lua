@@ -209,10 +209,6 @@ function Dashboard:init()
     SUI.register(Home.modules, Home.actions, Home.bars)
     SUI.tabMark("dash_stopwatch", Home.focusRunning)
     SUI.screenMark("dash_adhkar", Home.adhkarDue)
-    SUI.tabMark("home", function()
-        local n = Lock.streak()
-        return n > 0 and tostring(n) or nil
-    end)
     SUI.watchBar(Home.focusLabel)
     Lock.adhkarDue = Home.adhkarDue
     if not PluginShare.dashboard_started then

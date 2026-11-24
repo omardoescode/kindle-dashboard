@@ -53,12 +53,8 @@ local function finishedToday()
     end
 end
 
-local last_streak = 0
-function Lock.streak() return last_streak end
-
 function Lock.state()
     local secs, streak = stats()
-    last_streak = streak
     local mins = math.floor(secs / 60)
     local goal = G_reader_settings:readSetting("dashboard_daily_goal_minutes") or 30
     local done = finishedToday()
