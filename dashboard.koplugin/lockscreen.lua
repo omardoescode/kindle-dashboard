@@ -80,7 +80,7 @@ local function mood(mins, streak)
     if streak >= 7 then return "cheer", streak .. " days in a row!" end
     if mins >= goal then return "love", "Goal met · " .. streak .. "-day streak" end
     local hour = os.date("*t").hour
-    if hour >= 21 or hour < 5 then return "sleepy", mins .. " min today · Good night" end
+    if hour >= 23 or hour < 5 then return "sleepy", mins .. " min today · Good night" end
     return "happy", mins .. " min today · " .. (goal - mins) .. " min to your goal"
 end
 
@@ -216,6 +216,10 @@ function Lock.render()
     local w, h = Screen:getWidth(), Screen:getHeight()
     if not cached then refresh() end
     local mood, line = cached.mood, cached.line
+    -- Anqa sleeps from 11 PM to 5 AM, whatever the day was.
+    local hour = os.date("*t").hour
+    local night = hour >= 23 or hour < 5
+    if night then mood = "sleepy" end
     local bb = Blitbuffer.new(w, h, Screen.bb:getType())
     bb:fill(Blitbuffer.COLOR_WHITE)
     local cx = math.floor(w / 2)
@@ -224,8 +228,7 @@ function Lock.render()
     local unit = Screen:scaleBySize(1000) / 1000
     local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
-    local azkar = cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"
-    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
+    local azkar = cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
     local probe = TextWidget:new{ text = "Xg", face = face }
     local line_h = probe:getSize().h
     probe:free()
