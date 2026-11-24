@@ -46,13 +46,16 @@ local TOUCH_ENDS = { tap = true, double_tap = true, two_finger_tap = true, swipe
     pinch = true, spread = true, rotate = true }
 
 -- The power button still sleeps the device: preventScreenSaver only stops the idle timeout.
+-- On Kindle, AutoSuspend's t1 timer re-runs itself at once, forever, once its timeout has passed without
+-- a touch, which freezes KOReader; it stops only while PluginShare.keepalive is set (as KeepAlive does).
 function StopwatchWidget.keep_awake(on)
     PluginShare.pause_auto_suspend = on
     if not Device:isKindle() then return end
-    local ok, lipc = pcall(require, "liblipclua")
+    PluginShare.keepalive = on
+    local ok, lipc = pcall(require, "libopenlipclua")
     if not ok then return end
-    local h = lipc.init("com.github.mykindle.dashboard")
-    if not h then return end
+    local opened, h = pcall(lipc.open_no_name)
+    if not opened or not h then return end
     pcall(h.set_int_property, h, "com.lab126.powerd", "preventScreenSaver", on and 1 or 0)
     h:close()
 end
