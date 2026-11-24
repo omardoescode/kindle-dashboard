@@ -55,7 +55,7 @@ end
 
 function AdhkarWidget:init()
     self.dimen = Geom:new{ x = 0, y = 0, w = Screen:getWidth(), h = Screen:getHeight() }
-    self.progress, self.store = Adhkar.load()
+    self.progress = Adhkar.load()
     -- Simple UI wraps self[1] with its bars when it shows this widget, so builds replace only the body.
     self.body = FrameContainer:new{ bordersize = 0, padding = 0, margin = 0 }
     self[1] = self.body
@@ -198,7 +198,9 @@ function AdhkarWidget:build()
 end
 
 function AdhkarWidget:save()
-    Adhkar.save(self.progress, self.store)
+    if not self.dirty then return end
+    Adhkar.save(self.progress, self.set)
+    self.dirty = false
 end
 
 function AdhkarWidget:refresh()
@@ -208,6 +210,7 @@ end
 
 function AdhkarWidget:act(fn)
     fn(self.st, self.set)
+    self.dirty = true
     self:save()
     self:refresh()
 end
@@ -220,6 +223,7 @@ end
 
 function AdhkarWidget:onCount()
     if self.st.done then return true end
+    self.dirty = true
     if Adhkar.count(self.st, self.set) then
         self:save()
         self:refresh()

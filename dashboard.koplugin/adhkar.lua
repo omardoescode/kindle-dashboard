@@ -41,10 +41,10 @@ function Adhkar.load()
     return { morning = s:readSetting("morning"), evening = s:readSetting("evening") }, s
 end
 
-function Adhkar.save(progress, s)
-    s = s or open()
-    s:saveSetting("morning", progress.morning)
-    s:saveSetting("evening", progress.evening)
+-- Writes one set to a fresh copy of the file, so a widget with stale progress cannot undo another's.
+function Adhkar.save(progress, set)
+    local s = open()
+    s:saveSetting(set, progress[set])
     s:flush()
 end
 
