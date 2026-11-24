@@ -194,7 +194,7 @@ local function paintBubble(bb, text, face, cx, y, u, pad, dark)
     end
     tw:paintTo(bb, x + u + pad, top + u + pad)
     tw:free()
-    return tail * u + bh
+    return tail * u + bh, { x = x, y = y, w = bw, h = tail * u + bh }
 end
 
 -- powerd puts the Kindle to sleep a few seconds after it asks KOReader to show the lock screen, without
@@ -249,7 +249,12 @@ function Lock.render()
     local top = math.floor((bottom - group_h) / 2 + cw * crown)
     local ch = paintCritter(bb, mood, cx, top, cw, cached.accessories)
     local y = top + ch + Screen:scaleBySize(16)
-    if azkar then y = y + paintBubble(bb, azkar, face, cx, y, u, pad, dark) end
+    Lock.bubble = nil
+    if azkar then
+        local bh, rect = paintBubble(bb, azkar, face, cx, y, u, pad, dark)
+        y = y + bh
+        if dark then Lock.bubble = rect end
+    end
     paintText(bb, line, face, cx, y + (azkar and Screen:scaleBySize(16) or gap - Screen:scaleBySize(16)))
     return bb
 end

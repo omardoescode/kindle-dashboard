@@ -61,6 +61,10 @@ if not ScreenSaverLockWidget.dashboard_swipe then
         orig_init(self)
         if not Device:isTouchDevice() or G_reader_settings:readSetting("screensaver_delay") ~= "gesture" then return end
         self.ges_events.Tap = nil
+        self.ges_events.DashboardTap = { GestureRange:new{
+            ges = "tap",
+            range = Geom:new{ x = 0, y = 0, w = Device.screen:getWidth(), h = Device.screen:getHeight() },
+        } }
         self.ges_events.DashboardSwipeUp = { GestureRange:new{
             ges = "swipe",
             range = Geom:new{ x = 0, y = 0, w = Device.screen:getWidth(), h = Device.screen:getHeight() },
@@ -86,6 +90,16 @@ if not ScreenSaverLockWidget.dashboard_swipe then
         UIManager:setDirty(nil, "ui", Geom:new{ x = x, y = y, w = size.w, h = size.h })
         UIManager:forceRePaint()
         self.is_infomessage_visible = true
+    end
+    -- A tap on the azkar bubble unlocks and opens those azkar.
+    ScreenSaverLockWidget.onDashboardTap = function(self, arg, ges)
+        local b = Lock.bubble
+        if b and ges.pos and ges.pos.x >= b.x and ges.pos.x < b.x + b.w and ges.pos.y >= b.y and ges.pos.y < b.y + b.h then
+            self:onClose()
+            local set = Home.adhkarSet()
+            require("ui/uimanager"):nextTick(function() Home.openAdhkar(set) end)
+        end
+        return true
     end
     ScreenSaverLockWidget.onDashboardSwipeUp = function(self, arg, ges)
         if ges.direction == "north" then return self:onClose() end
