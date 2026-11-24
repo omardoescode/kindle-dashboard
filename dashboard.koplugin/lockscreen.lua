@@ -161,16 +161,39 @@ local function paintCritter(bb, mood, cx, top, width, accessories)
     return h * s
 end
 
--- pad: draws white text on a black box with that padding.
-local function paintText(bb, text, face, cx, y, pad)
-    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(40),
-        fgcolor = pad and Blitbuffer.COLOR_WHITE or nil }
+local function paintText(bb, text, face, cx, y)
+    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(40) }
     local size = tw:getSize()
-    local x = cx - math.floor(size.w / 2)
-    if pad then bb:paintRect(x - pad, y, size.w + 2 * pad, size.h + 2 * pad, Blitbuffer.COLOR_BLACK) end
-    tw:paintTo(bb, x, y + (pad or 0))
+    tw:paintTo(bb, cx - math.floor(size.w / 2), y)
     tw:free()
-    return size.h + 2 * (pad or 0)
+    return size.h
+end
+
+-- A pixel speech bubble like Simple UI's, its tail pointing up at the critter. Returns its height.
+local function paintBubble(bb, text, face, cx, y, u, pad)
+    local tw = TextWidget:new{ text = text, face = face, max_width = bb:getWidth() - Screen:scaleBySize(80) }
+    local size = tw:getSize()
+    local tail = 4
+    local bw, bh = size.w + 2 * pad + 2 * u, size.h + 2 * pad + 2 * u
+    local x, top = cx - math.floor(bw / 2), y + tail * u
+    local BLACK, WHITE = Blitbuffer.COLOR_BLACK, Blitbuffer.COLOR_WHITE
+    bb:paintRect(x, top, bw, bh, BLACK)
+    bb:paintRect(x + u, top + u, bw - 2 * u, bh - 2 * u, WHITE)
+    for _, c in ipairs({ { x, top }, { x + bw - u, top }, { x, top + bh - u }, { x + bw - u, top + bh - u } }) do
+        bb:paintRect(c[1], c[2], u, u, WHITE)
+    end
+    bb:paintRect(x + u, top + u, u, u, BLACK)
+    bb:paintRect(x + bw - 2 * u, top + u, u, u, BLACK)
+    bb:paintRect(x + u, top + bh - 2 * u, u, u, BLACK)
+    bb:paintRect(x + bw - 2 * u, top + bh - 2 * u, u, u, BLACK)
+    local tx = cx - math.floor(u / 2)
+    for k = 0, tail do
+        bb:paintRect(tx - k * u, y + k * u, (2 * k + 1) * u, u, BLACK)
+        if k > 0 then bb:paintRect(tx - (k - 1) * u, y + k * u, (2 * k - 1) * u, u, WHITE) end
+    end
+    tw:paintTo(bb, x + u + pad, top + u + pad)
+    tw:free()
+    return tail * u + bh
 end
 
 -- powerd puts the Kindle to sleep a few seconds after it asks KOReader to show the lock screen, without
@@ -202,11 +225,11 @@ function Lock.render()
     local px = 13 * math.max(2, math.floor(Screen:scaleBySize(26) / 13 + 0.5))
     local face = Font:getFace("GeistPixel-Regular.ttf", (px - 0.5) / unit) or Font:getFace("cfont", 26)
     local azkar = cached.adhkar and "Don't forget your " .. cached.adhkar .. " azkar"
-    local gap, pad = Screen:scaleBySize(40), Screen:scaleBySize(6)
+    local gap, u, pad = Screen:scaleBySize(40), Screen:scaleBySize(3), Screen:scaleBySize(10)
     local probe = TextWidget:new{ text = "Xg", face = face }
     local line_h = probe:getSize().h
     probe:free()
-    local text_h = line_h + (azkar and Screen:scaleBySize(16) + line_h + 2 * pad or 0)
+    local text_h = line_h + (azkar and Screen:scaleBySize(16) + line_h + 2 * pad + 6 * u or 0)
     -- The whole group is centred above "Swipe up to read"; the critter shrinks when the screen is short.
     local bottom = h - Screen:scaleBySize(90)
     local crown = 0
@@ -218,11 +241,9 @@ function Lock.render()
     local group_h = cw * (0.73 + crown) + gap + text_h
     local top = math.floor((bottom - group_h) / 2 + cw * crown)
     local ch = paintCritter(bb, mood, cx, top, cw, cached.accessories)
-    local y = top + ch + gap
-    y = y + paintText(bb, line, face, cx, y)
-    if azkar then
-        paintText(bb, azkar, face, cx, y + Screen:scaleBySize(16), pad)
-    end
+    local y = top + ch + Screen:scaleBySize(16)
+    if azkar then y = y + paintBubble(bb, azkar, face, cx, y, u, pad) end
+    paintText(bb, line, face, cx, y + (azkar and Screen:scaleBySize(16) or gap - Screen:scaleBySize(16)))
     return bb
 end
 
