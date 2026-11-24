@@ -14,6 +14,7 @@ local StopwatchWidget = require("stopwatchwidget")
 local SUI = require("suiadapter")
 local Snip = require("snip")
 local Lock = require("lockscreen")
+local Recall = require("recallwidget")
 
 local function blanket(action, module)
     local ok, lipc = pcall(require, "libopenlipclua")
@@ -190,6 +191,7 @@ for _, path in ipairs({ "ui/elements/filemanager_menu_order", "ui/elements/reade
         for i, id in ipairs(found and {} or order.setting) do
             if id == "network" then
                 table.insert(order.setting, i + 1, "dashboard_bluetooth")
+                table.insert(order.setting, i + 2, "dashboard_recall")
                 break
             end
         end
@@ -264,6 +266,10 @@ function Dashboard:addToMainMenu(menu_items)
             callback = function() BluetoothWidget.show() end,
         }
     end
+    menu_items.dashboard_recall = {
+        text = _("Highlight recall"),
+        callback = function() UIManager:show(Recall:new{}, "full") end,
+    }
     menu_items.dashboard_adhkar = {
         text = _("Adhkar"),
         sorting_hint = "tools",

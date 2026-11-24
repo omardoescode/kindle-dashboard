@@ -39,6 +39,7 @@ Simple UI is the start screen and the screen after a book closes (Simple UI sett
 - **Bottom bar marks**: the Focus tab shows the running time (h:mm) and a dot while focus runs and the tab of a Custom Screen with the Adhkar reminder module shows a dot while adhkar are due. They are checked each minute.
 - **Arabic books** turn pages right-to-left automatically.
 - **Bluetooth** (Settings tab → Bluetooth, after Network): turn Bluetooth on or off, scan, pair, connect, disconnect, and forget (hold) devices, through Amazon's `com.lab126.btfd` over lipc. No Amazon UI needed. Works with [KinAMP](https://github.com/kbarni/KinAMP) for music while reading.
+- **Highlight recall** (Settings tab → Highlight recall, after Bluetooth): shows one random highlight, note or snip from the books in your history. Next shows another, Open opens the book at it, Close goes back. Long highlights scroll; Arabic text is right-to-left.
 - **Home folder sort**: the home folder is sorted by "last opened" (reading history).
 - **Brightness and warmth**: use KOReader gestures (left edge swipe: brightness, right edge swipe: warmth). Simple UI passes edge swipes to them.
 
