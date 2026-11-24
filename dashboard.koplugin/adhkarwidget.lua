@@ -29,7 +29,8 @@ local FONTS = "../plugins/dashboard.koplugin/fonts/"
 local SANS, SANS_BOLD = FONTS .. "IBMPlexSans-Regular.ttf", FONTS .. "IBMPlexSans-SemiBold.ttf"
 local BOLD = FONTS .. "IBMPlexSans-Bold.ttf"
 local ARABIC, ARABIC_REGULAR = FONTS .. "Zain-Bold.ttf", FONTS .. "Zain-Regular.ttf"
-local DHIKR_SIZES = { 34, 31, 28, 25, 22 }
+-- The smallest sizes are for the longest dhikr (the three Quls), so it fits without scrolling.
+local DHIKR_SIZES = { 34, 31, 28, 25, 22, 20, 18 }
 
 local AdhkarWidget = InputContainer:extend{
     name = "dashboard_adhkar",
